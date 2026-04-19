@@ -45,7 +45,7 @@ async function main() {
   if (existing) {
     console.log(`↻ Atualizando webhook existente (id=${existing.id})`);
     const res = await fetch(`https://api.cakto.com.br/public_api/webhook/${existing.id}/`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',

@@ -1,0 +1,37 @@
+{
+  "p25": {
+    "offerId": "or6iw5m",
+    "url": "https://pay.cakto.com.br/or6iw5m",
+    "price": 25
+  },
+  "p50": {
+    "offerId": "38ambko",
+    "url": "https://pay.cakto.com.br/38ambko",
+    "price": 50
+  },
+  "p75": {
+    "offerId": "347idjh",
+    "url": "https://pay.cakto.com.br/347idjh",
+    "price": 75
+  },
+  "p100": {
+    "offerId": "x3iswy4",
+    "url": "https://pay.cakto.com.br/x3iswy4",
+    "price": 100
+  },
+  "p150": {
+    "offerId": "ici9a43",
+    "url": "https://pay.cakto.com.br/ici9a43",
+    "price": 150
+  },
+  "p200": {
+    "offerId": "a7rhbpd",
+    "url": "https://pay.cakto.com.br/a7rhbpd",
+    "price": 200
+  },
+  "p300": {
+    "offerId": "5rao25x",
+    "url": "https://pay.cakto.com.br/5rao25x",
+    "price": 300
+  }
+}
