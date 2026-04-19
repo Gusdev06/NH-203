@@ -1,0 +1,10 @@
+node_modules
+.env
+cakto.md
+src/cakto-offers.json
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+dist
+.DS_Store

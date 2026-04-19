@@ -1,0 +1,249 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - button [ref=e8] [cursor=pointer]:
+          - img [ref=e9]
+        - generic [ref=e11]:
+          - checkbox [checked] [ref=e396] [cursor=pointer]
+          - button [ref=e557] [cursor=pointer]:
+            - img [ref=e21]
+          - button [ref=e558] [cursor=pointer]:
+            - generic [ref=e25]: G
+    - generic [ref=e26]:
+      - navigation [ref=e27]:
+        - button [ref=e28] [cursor=pointer]:
+          - img [ref=e29]
+        - region [ref=e559]:
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - link [ref=e560] [cursor=pointer]:
+                - /url: /dashboard/home
+                - img [ref=e561]
+              - link [ref=e562] [cursor=pointer]:
+                - /url: /dashboard/awards
+                - generic [ref=e46]:
+                  - img [ref=e563]
+                  - generic [ref=e48]:
+                    - img [ref=e564]
+                    - generic [ref=e51]:
+                      - generic [ref=e52]: Faturamento
+                      - generic [ref=e53]: R$ 188,10 / R$ 10K
+                      - generic [ref=e57]: 2%
+            - list [ref=e59]:
+              - link [ref=e565] [cursor=pointer]:
+                - /url: /dashboard/home
+                - button [ref=e566]:
+                  - generic [ref=e65]: Dashboard
+              - link [ref=e567] [cursor=pointer]:
+                - /url: /dashboard/products?tab=products
+                - button [ref=e568]:
+                  - generic [ref=e71]: Produtos
+              - link [ref=e569] [cursor=pointer]:
+                - /url: /dashboard/showcase
+                - button [ref=e570]:
+                  - generic [ref=e77]: Vitrine
+              - link [ref=e571] [cursor=pointer]:
+                - /url: /dashboard/my-sales?tab=paid
+                - button [ref=e572]:
+                  - generic [ref=e83]: Minhas vendas
+              - link [ref=e573] [cursor=pointer]:
+                - /url: /dashboard/subscriptions?tab=active
+                - button [ref=e574]:
+                  - generic [ref=e89]: Assinaturas
+              - link [ref=e575] [cursor=pointer]:
+                - /url: /dashboard/reports
+                - button [ref=e576]:
+                  - generic [ref=e95]: Relatórios
+              - link [ref=e577] [cursor=pointer]:
+                - /url: /dashboard/team
+                - button [ref=e578]:
+                  - generic [ref=e101]: Equipe
+              - link [ref=e579] [cursor=pointer]:
+                - /url: /dashboard/affiliates?tab=active
+                - button [ref=e580]:
+                  - generic [ref=e107]: Afiliados
+              - link [ref=e581] [cursor=pointer]:
+                - /url: /dashboard/financial
+                - button [ref=e582]:
+                  - generic [ref=e113]: Financeiro
+              - link [ref=e583] [cursor=pointer]:
+                - /url: /dashboard/products
+                - button [ref=e584]:
+                  - generic [ref=e119]: Integrações
+                  - img [ref=e120]
+              - link [ref=e585] [cursor=pointer]:
+                - /url: /dashboard/coupons
+                - button [ref=e586]:
+                  - generic [ref=e127]: Cupons
+              - link [ref=e587] [cursor=pointer]:
+                - /url: /dashboard/products
+                - button [ref=e588]:
+                  - generic [ref=e133]: Quiz
+              - link [ref=e589] [cursor=pointer]:
+                - /url: https://app.funeleiro.com.br
+                - button [ref=e590]:
+                  - generic [ref=e139]: Funeleiro
+      - main [ref=e140]:
+        - generic [ref=e402]:
+          - button [ref=e591] [cursor=pointer]: Adicionar Produto
+          - generic [ref=e405]:
+            - tablist [ref=e409]:
+              - tab [selected] [ref=e592] [cursor=pointer]: Meus Produtos
+              - tab [ref=e593] [cursor=pointer]: Minhas Assinaturas
+              - tab [ref=e594] [cursor=pointer]: Minhas co-produções
+              - tab [ref=e595] [cursor=pointer]: Minhas Afiliações
+            - tabpanel [ref=e596]:
+              - generic [ref=e416]:
+                - generic [ref=e417]:
+                  - generic [ref=e419]:
+                    - img [ref=e421]
+                    - textbox [ref=e599]:
+                      - /placeholder: Pesquisar
+                    - group
+                  - generic [ref=e426]:
+                    - generic [ref=e427]: Status
+                    - generic [ref=e428]:
+                      - combobox [ref=e600] [cursor=pointer]: Ativo
+                      - textbox: active
+                      - img
+                      - group:
+                        - generic: Produto
+                - region [ref=e601]:
+                  - table [ref=e438]:
+                    - rowgroup [ref=e439]:
+                      - row [ref=e602]:
+                        - columnheader [ref=e603]:
+                          - button [ref=e604] [cursor=pointer]: Nome
+                        - columnheader [ref=e605]:
+                          - button [ref=e606] [cursor=pointer]: Preço
+                        - columnheader [ref=e607]:
+                          - button [ref=e608] [cursor=pointer]: Status
+                        - columnheader [ref=e447]
+                    - rowgroup [ref=e448]:
+                      - button [ref=e609]:
+                        - cell [ref=e610]: +300 Prompts Para Fotos Profissionais
+                        - cell [ref=e611]: R$ 19,90
+                        - cell [ref=e612]:
+                          - generic [ref=e453]: Ativo
+                        - cell [ref=e454]:
+                          - button [ref=e456] [cursor=pointer]:
+                            - img [ref=e457]
+                      - button [ref=e616]:
+                        - cell [ref=e617]: Do zero ao dolar com IA
+                        - cell [ref=e618]: R$ 97,00
+                        - cell [ref=e619]:
+                          - generic [ref=e465]: Ativo
+                        - cell [ref=e466]:
+                          - button [ref=e468] [cursor=pointer]:
+                            - img [ref=e469]
+                      - button [ref=e623]:
+                        - cell [ref=e624]: Pack Backgrounds "Aesthetic" Viral
+                        - cell [ref=e625]: R$ 14,97
+                        - cell [ref=e626]:
+                          - generic [ref=e477]: Ativo
+                        - cell [ref=e478]:
+                          - button [ref=e480] [cursor=pointer]:
+                            - img [ref=e481]
+                      - button [ref=e630]:
+                        - cell [ref=e631]: 🇺🇸 Pack Cortes Gringos (RPM 5x Maior)
+                        - cell [ref=e632]: R$ 19,90
+                        - cell [ref=e633]:
+                          - generic [ref=e489]: Ativo
+                        - cell [ref=e490]:
+                          - button [ref=e492] [cursor=pointer]:
+                            - img [ref=e493]
+                      - button [ref=e637]:
+                        - cell [ref=e638]: Biblioteca de Cortes Virais
+                        - cell [ref=e639]: R$ 27,00
+                        - cell [ref=e640]:
+                          - generic [ref=e501]: Ativo
+                        - cell [ref=e502]:
+                          - button [ref=e504] [cursor=pointer]:
+                            - img [ref=e505]
+                      - button [ref=e644]:
+                        - cell [ref=e645]: +1 Criança na Mensagem Mágica
+                        - cell [ref=e646]: R$ 16,90
+                        - cell [ref=e647]:
+                          - generic [ref=e513]: Ativo
+                        - cell [ref=e514]:
+                          - button [ref=e516] [cursor=pointer]:
+                            - img [ref=e517]
+                      - button [ref=e651]:
+                        - cell [ref=e652]: Ligação Mágica do Papai Noel📞🎄
+                        - cell [ref=e653]: R$ 14,90
+                        - cell [ref=e654]:
+                          - generic [ref=e525]: Ativo
+                        - cell [ref=e526]:
+                          - button [ref=e528] [cursor=pointer]:
+                            - img [ref=e529]
+                      - button [ref=e658]:
+                        - cell [ref=e659]: Certificado de Bom Comportamento 📜
+                        - cell [ref=e660]: R$ 12,90
+                        - cell [ref=e661]:
+                          - generic [ref=e537]: Ativo
+                        - cell [ref=e538]:
+                          - button [ref=e540] [cursor=pointer]:
+                            - img [ref=e541]
+                - navigation [ref=e665]:
+                  - list [ref=e547]:
+                    - listitem [ref=e548]:
+                      - button [disabled]:
+                        - img
+                    - listitem [ref=e549]:
+                      - button [ref=e666] [cursor=pointer]: "1"
+                    - listitem [ref=e551]:
+                      - button [ref=e667] [cursor=pointer]: "2"
+                    - listitem [ref=e553]:
+                      - button [ref=e668] [cursor=pointer]:
+                        - img [ref=e555]
+  - dialog [ref=e671]:
+    - generic [ref=e673]:
+      - heading "Adicionar Produto" [level=5] [ref=e674]
+      - generic [ref=e675]:
+        - generic [ref=e676]:
+          - generic [ref=e677]: Tipo de pagamento
+          - generic [ref=e678]:
+            - combobox "Tipo de pagamento Pagamento único" [ref=e679] [cursor=pointer]: Pagamento único
+            - textbox: unique
+            - img
+            - group:
+              - generic: Tipo de pagamento
+        - generic [ref=e680]:
+          - generic [ref=e681]: Nome do Produto
+          - generic [ref=e682]:
+            - textbox "Nome do Produto" [ref=e683]: HOT — Créditos
+            - group:
+              - generic: Nome do Produto
+        - generic [ref=e684]:
+          - generic [ref=e685]:
+            - generic [ref=e709]: Descrição
+            - generic [ref=e686]:
+              - textbox "Descrição" [ref=e687]: Créditos para gerar imagens com IA no bot do Telegram
+              - group:
+                - generic: Descrição
+            - generic [ref=e711]: Coloque mais detalhes sobre seu produto, mínimo 100 caracteres.
+          - generic [ref=e688]: 53/100
+        - generic [ref=e689]:
+          - generic [ref=e690]: Página de Vendas
+          - generic [ref=e691]:
+            - img [ref=e693]
+            - textbox "Página de Vendas" [ref=e695]:
+              - /placeholder: https://
+            - group:
+              - generic: Página de Vendas
+          - generic [ref=e712]: A URL deve começar com https
+        - generic [ref=e697]:
+          - generic [ref=e698]: Preço
+          - generic [ref=e699]:
+            - paragraph [ref=e701]: R$
+            - textbox "Preço" [ref=e702]:
+              - /placeholder: R$ 0,00
+              - text: 25,00
+            - group:
+              - generic: Preço
+      - generic [ref=e703]:
+        - button "Cancelar" [ref=e704] [cursor=pointer]: Cancelar
+        - button "Continuar" [active] [ref=e705] [cursor=pointer]:
+          - text: Continuar
+          - img [ref=e707]

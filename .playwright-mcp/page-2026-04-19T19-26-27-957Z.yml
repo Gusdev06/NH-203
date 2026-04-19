@@ -1,0 +1,26 @@
+- main [ref=e2]:
+  - generic [ref=e4]:
+    - img "Cakto Logo" [ref=e5]
+    - generic [ref=e6]:
+      - heading "Entrar na sua conta" [level=1] [ref=e7]
+      - paragraph [ref=e8]: Insira seus dados abaixo para continuar sua jornada na Cakto
+      - tablist "Opções de login" [ref=e9]:
+        - tab "Login sem senha" [selected] [ref=e10] [cursor=pointer]
+        - tab "Login com senha" [ref=e11] [cursor=pointer]
+      - tabpanel "Login sem senha" [ref=e13]:
+        - generic [ref=e14]:
+          - generic [ref=e15]:
+            - generic [ref=e16]: Email
+            - textbox "Email" [ref=e17]:
+              - /placeholder: Digite seu e-mail para login sem senha
+          - generic [ref=e18]:
+            - checkbox "Manter conexão" [ref=e19] [cursor=pointer]
+            - generic [ref=e20]:
+              - generic [ref=e21] [cursor=pointer]: Manter conexão
+              - paragraph [ref=e22]: Se você marcar esta opção, seu login será mantido até que faça logout ou limpe os dados do navegador
+          - button "Enviar Link De Acesso" [ref=e23] [cursor=pointer]
+          - paragraph [ref=e24]:
+            - text: Não tem uma conta?
+            - link "Cadastre-se" [ref=e25] [cursor=pointer]:
+              - /url: https://app.cakto.com.br/auth/register/
+  - img "Cakto" [ref=e27]

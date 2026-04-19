@@ -1,0 +1,236 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - button [ref=e8] [cursor=pointer]:
+          - img [ref=e9]
+        - generic [ref=e11]:
+          - checkbox [checked] [ref=e859] [cursor=pointer]
+          - button "0" [ref=e862] [cursor=pointer]:
+            - generic [ref=e20]:
+              - img [ref=e21]
+              - generic: "0"
+          - button "G" [ref=e864] [cursor=pointer]:
+            - generic [ref=e25]: G
+    - generic [ref=e26]:
+      - navigation [ref=e27]:
+        - button [ref=e28] [cursor=pointer]:
+          - img [ref=e29]
+        - region "scrollable content" [ref=e866]:
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - link "logo" [ref=e867] [cursor=pointer]:
+                - /url: /dashboard/home
+                - img "logo" [ref=e868]
+              - link "Nível Início - Faturamento Level Icon Faturamento R$ 188,10 / R$ 10K 2%" [ref=e869] [cursor=pointer]:
+                - /url: /dashboard/awards
+                - generic [ref=e46]:
+                  - img "Nível Início - Faturamento" [ref=e870]
+                  - generic [ref=e48]:
+                    - img "Level Icon" [ref=e871]
+                    - generic [ref=e51]:
+                      - generic [ref=e52]: Faturamento
+                      - generic [ref=e53]: R$ 188,10 / R$ 10K
+                      - generic [ref=e57]: 2%
+            - list [ref=e59]:
+              - link "Dashboard" [ref=e872] [cursor=pointer]:
+                - /url: /dashboard/home
+                - button "Dashboard" [ref=e873]:
+                  - generic [ref=e65]: Dashboard
+              - link "Produtos" [ref=e874] [cursor=pointer]:
+                - /url: /dashboard/products?tab=products
+                - button "Produtos" [ref=e875]:
+                  - generic [ref=e71]: Produtos
+              - link "Vitrine" [ref=e876] [cursor=pointer]:
+                - /url: /dashboard/showcase
+                - button "Vitrine" [ref=e877]:
+                  - generic [ref=e77]: Vitrine
+              - link "Minhas vendas" [ref=e878] [cursor=pointer]:
+                - /url: /dashboard/my-sales?tab=paid
+                - button "Minhas vendas" [ref=e879]:
+                  - generic [ref=e83]: Minhas vendas
+              - link "Assinaturas" [ref=e880] [cursor=pointer]:
+                - /url: /dashboard/subscriptions?tab=active
+                - button "Assinaturas" [ref=e881]:
+                  - generic [ref=e89]: Assinaturas
+              - link "Relatórios" [ref=e882] [cursor=pointer]:
+                - /url: /dashboard/reports
+                - button "Relatórios" [ref=e883]:
+                  - generic [ref=e95]: Relatórios
+              - link "Equipe" [ref=e884] [cursor=pointer]:
+                - /url: /dashboard/team
+                - button "Equipe" [ref=e885]:
+                  - generic [ref=e101]: Equipe
+              - link "Afiliados" [ref=e886] [cursor=pointer]:
+                - /url: /dashboard/affiliates?tab=active
+                - button "Afiliados" [ref=e887]:
+                  - generic [ref=e107]: Afiliados
+              - link "Financeiro" [ref=e888] [cursor=pointer]:
+                - /url: /dashboard/financial
+                - button "Financeiro" [ref=e889]:
+                  - generic [ref=e113]: Financeiro
+              - link "Integrações" [ref=e890] [cursor=pointer]:
+                - /url: /dashboard/products/050f2861-ac56-41d1-b716-7b12fece446e/edit
+                - button "Integrações" [ref=e891]:
+                  - generic [ref=e119]: Integrações
+                  - img [ref=e120]
+              - link "Cupons" [ref=e893] [cursor=pointer]:
+                - /url: /dashboard/coupons
+                - button "Cupons" [ref=e894]:
+                  - generic [ref=e127]: Cupons
+              - link "Quiz" [ref=e895] [cursor=pointer]:
+                - /url: /dashboard/products/050f2861-ac56-41d1-b716-7b12fece446e/edit
+                - button "Quiz" [ref=e896]:
+                  - generic [ref=e133]: Quiz
+              - link "Funeleiro" [ref=e897] [cursor=pointer]:
+                - /url: https://app.funeleiro.com.br
+                - button "Funeleiro" [ref=e898]:
+                  - generic [ref=e139]: Funeleiro
+      - main [ref=e140]:
+        - generic [ref=e900]:
+          - generic [ref=e901]:
+            - button "Voltar" [ref=e902] [cursor=pointer]:
+              - img [ref=e904]
+              - text: Voltar
+            - button "Salvar Produto" [ref=e906] [cursor=pointer]: Salvar Produto
+          - generic [ref=e908]:
+            - generic:
+              - img
+            - tablist [ref=e911]:
+              - tab "Geral" [selected] [ref=e912] [cursor=pointer]:
+                - paragraph [ref=e914]: Geral
+              - tab "Configurações" [ref=e915] [cursor=pointer]:
+                - paragraph [ref=e917]: Configurações
+              - tab "Order bump" [ref=e918] [cursor=pointer]:
+                - paragraph [ref=e920]: Order bump
+              - tab "Upsell / Downsell" [ref=e921] [cursor=pointer]:
+                - paragraph [ref=e923]: Upsell / Downsell
+              - tab "Checkout" [ref=e924] [cursor=pointer]:
+                - paragraph [ref=e926]: Checkout
+              - tab "Co-produção" [ref=e927] [cursor=pointer]:
+                - paragraph [ref=e929]: Co-produção
+              - tab "Cupons" [ref=e930] [cursor=pointer]:
+                - paragraph [ref=e932]: Cupons
+              - tab "Afiliados" [ref=e933] [cursor=pointer]:
+                - paragraph [ref=e935]: Afiliados
+              - tab "Links" [ref=e936] [cursor=pointer]:
+                - paragraph [ref=e938]: Links
+            - img [ref=e941] [cursor=pointer]
+          - tabpanel "Geral" [ref=e943]:
+            - generic [ref=e944]:
+              - generic [ref=e945]:
+                - generic [ref=e946]:
+                  - heading "Produto" [level=6] [ref=e947]
+                  - paragraph [ref=e948]: A aprovação do produto é instantânea, ou seja, você pode cadastrar e já começar a vender. A imagem do produto será exibida na área de membros e no seu programa de afiliados.
+                - generic [ref=e951]:
+                  - generic [ref=e952]:
+                    - generic [ref=e953]: Nome do produto
+                    - generic [ref=e954]:
+                      - textbox "Nome do produto" [ref=e955]: HOT — Créditos
+                      - group:
+                        - generic: Nome do produto
+                  - generic [ref=e956]:
+                    - generic [ref=e957]: Descrição
+                    - generic [ref=e958]:
+                      - textbox "Descrição" [ref=e959]: Créditos para gerar imagens em alta qualidade com IA diretamente no bot do Telegram. Cada geração consome 5 créditos e entrega uma imagem única feita pelo modelo Seedream 4.5.
+                      - group:
+                        - generic: Descrição
+                  - generic [ref=e961]:
+                    - generic: Categoria
+                    - generic [ref=e962]:
+                      - combobox "Categoria" [ref=e963] [cursor=pointer]
+                      - textbox
+                      - img
+                      - group:
+                        - generic: Categoria
+                  - generic [ref=e965]:
+                    - generic [ref=e966]: Tipo de pagamento
+                    - generic [ref=e967]:
+                      - combobox "Tipo de pagamento Único" [ref=e968] [cursor=pointer]: Único
+                      - textbox: unique
+                      - img
+                      - group:
+                        - generic: Tipo de pagamento
+                  - generic [ref=e969]:
+                    - generic [ref=e970]: Imagem do Produto
+                    - generic [ref=e971]:
+                      - generic [ref=e973] [cursor=pointer]:
+                        - img [ref=e975]
+                        - generic [ref=e1052]:
+                          - heading "Arraste ou selecione o arquivo" [level=6] [ref=e1053]
+                          - paragraph [ref=e1054]: Solte os arquivos aqui ou clique parabuscarem seu computador
+                      - generic [ref=e1055]: "Formatos aceitos: JPG ou PNG. Tamanho máximo: 10MB"
+                    - alert [ref=e1056]:
+                      - img [ref=e1058]
+                      - generic [ref=e1060]: "Tamanho recomendado: 300x250 pixels"
+              - generic [ref=e1061]:
+                - generic [ref=e1062]:
+                  - heading "Preços" [level=6] [ref=e1063]
+                  - paragraph
+                - generic [ref=e1066]:
+                  - generic [ref=e1071]:
+                    - generic [ref=e1072]: Garantia
+                    - generic [ref=e1073]:
+                      - combobox "Garantia 7 dias" [ref=e1074] [cursor=pointer]: 7 dias
+                      - textbox: "7"
+                      - img
+                      - group:
+                        - generic: Garantia
+                  - table "ofertas secundárias" [ref=e1076]:
+                    - rowgroup [ref=e1077]:
+                      - row "Nome Preço Tipo Ações" [ref=e1078]:
+                        - columnheader "Nome" [ref=e1079]
+                        - columnheader "Preço" [ref=e1080]
+                        - columnheader "Tipo" [ref=e1081]
+                        - columnheader "Ações" [ref=e1082]
+                    - rowgroup [ref=e1083]:
+                      - row "HOT — Créditos R$ 25,00 Único Editar" [ref=e1084]:
+                        - cell "HOT — Créditos" [ref=e1085]
+                        - cell "R$ 25,00" [ref=e1086]
+                        - cell "Único" [ref=e1087]
+                        - cell "Editar" [ref=e1088]:
+                          - generic "Editar" [ref=e1090]:
+                            - button [ref=e1091] [cursor=pointer]:
+                              - img [ref=e1092]
+                  - generic [ref=e1095]:
+                    - button "Adicionar" [ref=e1096] [cursor=pointer]: Adicionar
+                    - paragraph [ref=e1097]: 1 / 10
+              - generic [ref=e1098]:
+                - generic [ref=e1099]:
+                  - heading "Suporte ao cliente" [level=6] [ref=e1100]
+                  - paragraph [ref=e1101]: Aprenda como preencher os dados de suporte ao cliente
+                - generic [ref=e1104]:
+                  - generic [ref=e1105]:
+                    - generic [ref=e1106]: Página de vendas
+                    - generic [ref=e1107]:
+                      - img [ref=e1109]
+                      - textbox "Página de vendas" [ref=e1111]:
+                        - /placeholder: https://
+                        - text: https://t.me
+                      - group:
+                        - generic: Página de vendas
+                  - generic [ref=e1112]:
+                    - generic [ref=e1113]: E-mail de suporte
+                    - generic [ref=e1114]:
+                      - img [ref=e1116]
+                      - textbox "E-mail de suporte" [disabled] [ref=e1118]: gugomes688@hotmail.com
+                      - button "Alterar" [ref=e1120] [cursor=pointer]: Alterar
+                      - group:
+                        - generic: E-mail de suporte
+                  - generic [ref=e1122]:
+                    - generic [ref=e1123]: Nome de exibição do produtor
+                    - generic [ref=e1124]:
+                      - img [ref=e1126]
+                      - textbox "Nome de exibição do produtor" [ref=e1128]
+                      - group:
+                        - generic: Nome de exibição do produtor
+          - generic [ref=e1129]:
+            - button "Excluir Produto" [ref=e1131] [cursor=pointer]: Excluir Produto
+            - button "Salvar Produto" [ref=e1132] [cursor=pointer]: Salvar Produto
+    - alert [ref=e1137]:
+      - generic [ref=e1138]:
+        - img [ref=e1140]
+        - text: Produto criado com sucesso
+      - button [ref=e1143] [cursor=pointer]:
+        - img [ref=e1144]
+  - img
