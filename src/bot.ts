@@ -34,6 +34,32 @@ const pending = new Map<number, PendingState>();
 const generating = new Set<number>();
 const lastGenerated = new Map<number, string>();
 
+const HD_URL_CAP = 2000;
+const hdUrls = new Map<string, string>();
+
+function saveHdUrl(url: string): string {
+  const token =
+    Math.random().toString(36).slice(2, 10) +
+    Date.now().toString(36).slice(-4);
+  hdUrls.set(token, url);
+  if (hdUrls.size > HD_URL_CAP) {
+    const firstKey = hdUrls.keys().next().value;
+    if (firstKey) hdUrls.delete(firstKey);
+  }
+  return token;
+}
+
+function resultKeyboard(token: string): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('⬇️ Baixar HD', `gen:hd:${token}`)
+    .row()
+    .text('✏️ Editar esta', 'gen:edit')
+    .text('🙈 Esconder', `gen:hide:${token}`)
+    .row()
+    .text('🎨 Gerar outra', 'menu:gerar')
+    .text('🏠 Menu', 'menu:home');
+}
+
 async function getTelegramFileUrl(ctx: Context, fileId: string): Promise<string | null> {
   const file = await ctx.api.getFile(fileId);
   if (!file.file_path) return null;
@@ -232,7 +258,8 @@ bot.callbackQuery('gen:cancel', async (ctx) => {
   await showHome(ctx, id);
 });
 
-bot.callbackQuery('gen:hide', async (ctx) => {
+bot.callbackQuery(/^gen:hide:(.+)$/, async (ctx) => {
+  const token = ctx.match[1];
   const msg = ctx.callbackQuery.message;
   const photos = msg && 'photo' in msg ? msg.photo : undefined;
   if (!photos || photos.length === 0) {
@@ -242,20 +269,36 @@ bot.callbackQuery('gen:hide', async (ctx) => {
   const fileId = photos[photos.length - 1].file_id;
   await ctx.answerCallbackQuery();
 
-  const kb = new InlineKeyboard()
-    .text('✏️ Editar esta', 'gen:edit')
-    .text('🙈 Esconder', 'gen:hide')
-    .row()
-    .text('🎨 Gerar outra', 'menu:gerar')
-    .text('🏠 Menu', 'menu:home');
-
   await ctx.replyWithPhoto(fileId, {
     caption: '🙈 <b>Escondida</b> — toque na imagem pra revelar.',
     parse_mode: 'HTML',
     has_spoiler: true,
-    reply_markup: kb,
+    reply_markup: resultKeyboard(token),
   });
   await ctx.deleteMessage().catch(() => {});
+});
+
+bot.callbackQuery(/^gen:hd:(.+)$/, async (ctx) => {
+  const token = ctx.match[1];
+  const url = hdUrls.get(token);
+  if (!url) {
+    await ctx.answerCallbackQuery(
+      'Versão HD não está mais disponível. Gere a imagem novamente.'
+    );
+    return;
+  }
+  await ctx.answerCallbackQuery('Enviando HD...');
+  try {
+    await ctx.replyWithDocument(url, {
+      caption: '🖼 <b>HD</b> — sem compressão',
+      parse_mode: 'HTML',
+    });
+  } catch (err) {
+    console.error('Erro ao enviar HD:', err);
+    await ctx.reply(
+      '❌ Não consegui enviar a versão HD. Tenta de novo em alguns segundos.'
+    );
+  }
 });
 
 bot.callbackQuery('gen:edit', async (ctx) => {
@@ -448,12 +491,8 @@ async function handleGenerate(
 
     const remaining = getCredits(id);
     const remainingImgs = Math.floor(remaining / CREDITS_PER_IMAGE);
-    const kb = new InlineKeyboard()
-      .text('✏️ Editar esta', 'gen:edit')
-      .text('🙈 Esconder', 'gen:hide')
-      .row()
-      .text('🎨 Gerar outra', 'menu:gerar')
-      .text('🏠 Menu', 'menu:home');
+    const token = saveHdUrl(out);
+    const kb = resultKeyboard(token);
 
     await ctx.replyWithPhoto(out, {
       caption:
