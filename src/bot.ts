@@ -6,6 +6,7 @@ import {
   debitCredits,
   refundCredits,
   logGeneration,
+  isBanned,
 } from './db.ts';
 import { generateImage } from './replicate.ts';
 import {
@@ -25,6 +26,21 @@ if (!process.env.REPLICATE_API_TOKEN)
   throw new Error('REPLICATE_API_TOKEN não configurado no .env');
 
 const bot = new Bot(token);
+
+bot.use(async (ctx, next) => {
+  const id = ctx.from?.id;
+  if (id && isBanned(id)) {
+    if (ctx.callbackQuery) {
+      await ctx.answerCallbackQuery('⛔ Conta bloqueada.').catch(() => {});
+    } else if (ctx.message) {
+      await ctx
+        .reply('⛔ Sua conta está bloqueada. Entre em contato com o suporte.')
+        .catch(() => {});
+    }
+    return;
+  }
+  await next();
+});
 
 type PendingState =
   | { step: 'await_input' }

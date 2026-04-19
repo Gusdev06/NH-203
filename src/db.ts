@@ -34,6 +34,13 @@ if (generationsCols.some((c) => c.name === 'image_url')) {
   db.exec('ALTER TABLE generations DROP COLUMN image_url');
 }
 
+const usersCols = db
+  .prepare("PRAGMA table_info(users)")
+  .all() as { name: string }[];
+if (!usersCols.some((c) => c.name === 'banned')) {
+  db.exec('ALTER TABLE users ADD COLUMN banned INTEGER NOT NULL DEFAULT 0');
+}
+
 const INITIAL_CREDITS = 5;
 
 export function ensureUser(telegramId: number): { credits: number; isNew: boolean } {
@@ -128,7 +135,12 @@ export function logGeneration(
   ).run(telegramId, prompt, creditsSpent, Date.now());
 }
 
-export type AdminUser = { telegram_id: number; credits: number; created_at: number };
+export type AdminUser = {
+  telegram_id: number;
+  credits: number;
+  created_at: number;
+  banned: number;
+};
 export type AdminGeneration = {
   id: number;
   telegram_id: number;
@@ -194,7 +206,7 @@ export function getAdminStats(): AdminStats {
 
   const recentUsers = db
     .prepare(
-      'SELECT telegram_id, credits, created_at FROM users ORDER BY created_at DESC LIMIT 20'
+      'SELECT telegram_id, credits, created_at, banned FROM users ORDER BY created_at DESC LIMIT 20'
     )
     .all() as AdminUser[];
 
@@ -227,4 +239,112 @@ export function getAdminStats(): AdminStats {
     recentOrders,
     dailyGenerations,
   };
+}
+
+export function isBanned(telegramId: number): boolean {
+  const row = db
+    .prepare('SELECT banned FROM users WHERE telegram_id = ?')
+    .get(telegramId) as { banned: number } | undefined;
+  return row?.banned === 1;
+}
+
+export function setBanned(telegramId: number, banned: boolean): boolean {
+  const result = db
+    .prepare('UPDATE users SET banned = ? WHERE telegram_id = ?')
+    .run(banned ? 1 : 0, telegramId);
+  return result.changes === 1;
+}
+
+export type AdminCreditsResult =
+  | { ok: true; credits: number }
+  | { ok: false; reason: string };
+
+export function adminAddCredits(
+  telegramId: number,
+  amount: number
+): AdminCreditsResult {
+  if (!Number.isInteger(amount) || amount === 0) {
+    return { ok: false, reason: 'quantidade inválida' };
+  }
+  const txn = db.transaction((): AdminCreditsResult => {
+    const row = db
+      .prepare('SELECT credits FROM users WHERE telegram_id = ?')
+      .get(telegramId) as { credits: number } | undefined;
+    if (!row) return { ok: false, reason: 'usuário não encontrado' };
+    const next = row.credits + amount;
+    if (next < 0) return { ok: false, reason: 'saldo não pode ficar negativo' };
+    db.prepare('UPDATE users SET credits = ? WHERE telegram_id = ?').run(
+      next,
+      telegramId
+    );
+    return { ok: true, credits: next };
+  });
+  return txn();
+}
+
+export type UserDetail = {
+  user: AdminUser;
+  generations: AdminGeneration[];
+  orders: AdminOrder[];
+  totals: { spent: number; generations: number; revenue: number };
+};
+
+export function getUserDetail(telegramId: number): UserDetail | null {
+  const user = db
+    .prepare(
+      'SELECT telegram_id, credits, created_at, banned FROM users WHERE telegram_id = ?'
+    )
+    .get(telegramId) as AdminUser | undefined;
+  if (!user) return null;
+
+  const generations = db
+    .prepare(
+      'SELECT id, telegram_id, prompt, credits_spent, created_at FROM generations WHERE telegram_id = ? ORDER BY created_at DESC LIMIT 100'
+    )
+    .all(telegramId) as AdminGeneration[];
+
+  const orders = db
+    .prepare(
+      'SELECT order_id, telegram_id, pkg_id, credits, amount, created_at FROM processed_orders WHERE telegram_id = ? ORDER BY created_at DESC LIMIT 100'
+    )
+    .all(telegramId) as AdminOrder[];
+
+  const spent = (db
+    .prepare(
+      'SELECT COALESCE(SUM(credits_spent), 0) AS v FROM generations WHERE telegram_id = ?'
+    )
+    .get(telegramId) as { v: number }).v;
+  const generationsOk = (db
+    .prepare(
+      'SELECT COUNT(*) AS v FROM generations WHERE telegram_id = ? AND credits_spent > 0'
+    )
+    .get(telegramId) as { v: number }).v;
+  const revenue = (db
+    .prepare(
+      'SELECT COALESCE(SUM(amount), 0) AS v FROM processed_orders WHERE telegram_id = ?'
+    )
+    .get(telegramId) as { v: number }).v;
+
+  return {
+    user,
+    generations,
+    orders,
+    totals: { spent, generations: generationsOk, revenue },
+  };
+}
+
+export function getAllOrdersForCsv(): AdminOrder[] {
+  return db
+    .prepare(
+      'SELECT order_id, telegram_id, pkg_id, credits, amount, created_at FROM processed_orders ORDER BY created_at DESC'
+    )
+    .all() as AdminOrder[];
+}
+
+export function getAllGenerationsForCsv(): AdminGeneration[] {
+  return db
+    .prepare(
+      'SELECT id, telegram_id, prompt, credits_spent, created_at FROM generations ORDER BY created_at DESC'
+    )
+    .all() as AdminGeneration[];
 }
