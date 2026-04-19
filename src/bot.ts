@@ -7,6 +7,7 @@ import {
   refundCredits,
   logGeneration,
   isBanned,
+  updateUserProfile,
 } from './db.ts';
 import { generateImage } from './replicate.ts';
 import {
@@ -28,14 +29,27 @@ if (!process.env.REPLICATE_API_TOKEN)
 const bot = new Bot(token);
 
 bot.use(async (ctx, next) => {
+  if (ctx.from && !ctx.from.is_bot) {
+    updateUserProfile(ctx.from.id, {
+      username: ctx.from.username ?? null,
+      firstName: ctx.from.first_name ?? null,
+      lastName: ctx.from.last_name ?? null,
+      isPremium: ctx.from.is_premium === true,
+      languageCode: ctx.from.language_code ?? null,
+    });
+  }
+  await next();
+});
+
+bot.use(async (ctx, next) => {
   const id = ctx.from?.id;
   if (id && isBanned(id)) {
     if (ctx.callbackQuery) {
-      await ctx.answerCallbackQuery('⛔ Conta bloqueada.').catch(() => {});
+      await ctx.answerCallbackQuery('⛔ Conta bloqueada.').catch(() => { });
     } else if (ctx.message) {
       await ctx
         .reply('⛔ Sua conta está bloqueada. Entre em contato com o suporte.')
-        .catch(() => {});
+        .catch(() => { });
     }
     return;
   }
@@ -85,10 +99,9 @@ async function getTelegramFileUrl(ctx: Context, fileId: string): Promise<string 
 // ───────────────────── helpers ─────────────────────
 
 function mainMenu(credits: number): { text: string; keyboard: InlineKeyboard } {
-  const images = Math.floor(credits / CREDITS_PER_IMAGE);
   const text =
     `🔥 <b>HOT</b> — gerador de imagens IA\n\n` +
-    `💎 Seus créditos: <b>${credits}</b> (${images} ${images === 1 ? 'imagem' : 'imagens'})\n` +
+    `💎 Seus créditos: <b>${credits}</b>\n` +
     `🎨 Cada geração custa <b>${CREDITS_PER_IMAGE} créditos</b>\n\n` +
     `Escolha uma opção abaixo:`;
   const keyboard = new InlineKeyboard()
@@ -149,11 +162,9 @@ async function showPackages(ctx: Context) {
 async function showSaldo(ctx: Context, id: number) {
   ensureUser(id);
   const credits = getCredits(id);
-  const images = Math.floor(credits / CREDITS_PER_IMAGE);
   const text =
     `💎 <b>Seu saldo</b>\n\n` +
-    `Créditos: <b>${credits}</b>\n` +
-    `Imagens disponíveis: <b>${images}</b>`;
+    `Créditos: <b>${credits}</b>`;
   const kb = new InlineKeyboard()
     .text('🎨 Gerar agora', 'menu:gerar')
     .text('💳 Comprar mais', 'menu:comprar')
@@ -171,7 +182,6 @@ async function showAjuda(ctx: Context) {
     `4️⃣ Descreva o que quer na imagem\n` +
     `5️⃣ Receba em segundos!\n\n` +
     `⚡ Cada geração usa <b>${CREDITS_PER_IMAGE} créditos</b>\n` +
-    `🖼 Modelo: Seedream 4.5 (2K/4K)\n\n` +
     `<b>Comandos</b>\n` +
     `/gerar — abrir fluxo de geração\n` +
     `/saldo — ver créditos\n` +
@@ -192,7 +202,7 @@ async function startGenerate(ctx: Context, id: number) {
     await editOrReply(
       ctx,
       `⚠️ <b>Créditos insuficientes</b>\n\n` +
-        `Você tem <b>${getCredits(id)}</b>, precisa de <b>${CREDITS_PER_IMAGE}</b>.`,
+      `Você tem <b>${getCredits(id)}</b>, precisa de <b>${CREDITS_PER_IMAGE}</b>.`,
       kb
     );
     return;
@@ -202,10 +212,10 @@ async function startGenerate(ctx: Context, id: number) {
   await editOrReply(
     ctx,
     `🎨 <b>Nova geração</b>\n\n` +
-      `Agora envie <b>uma única mensagem</b>:\n` +
-      `• <b>Imagem + legenda</b> (a legenda é o prompt), ou\n` +
-      `• <b>Apenas texto</b> (sem imagem de referência)\n\n` +
-      `💡 Pra enviar imagem com prompt: anexe a foto e digite a descrição no campo de legenda antes de mandar.`,
+    `Agora envie <b>uma única mensagem</b>:\n` +
+    `• <b>Imagem + legenda</b> (a legenda é o prompt), ou\n` +
+    `• <b>Apenas texto</b> (sem imagem de referência)\n\n` +
+    `💡 Pra enviar imagem com prompt: anexe a foto e digite a descrição no campo de legenda antes de mandar.`,
     kb
   );
 }
@@ -291,7 +301,7 @@ bot.callbackQuery(/^gen:hide:(.+)$/, async (ctx) => {
     has_spoiler: true,
     reply_markup: resultKeyboard(token),
   });
-  await ctx.deleteMessage().catch(() => {});
+  await ctx.deleteMessage().catch(() => { });
 });
 
 bot.callbackQuery(/^gen:hd:(.+)$/, async (ctx) => {
@@ -361,7 +371,6 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
     return;
   }
 
-  const images = pkg.credits / PKG_CREDITS_PER_IMAGE;
   const userId = ctx.from!.id;
   const tag = `tg_${userId}_${pkgId}`;
   const checkoutUrl =
@@ -379,10 +388,9 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
   const bonusLabel = bonusCredits ? ` 🎁 +${bonusCredits} créditos bônus` : '';
   await editOrReply(
     ctx,
-    `📦 <b>${pkg.credits} créditos</b> — <b>${formatBrl(pkg.priceBrl)}</b>${bonusLabel}\n` +
-      `<i>(≈ ${images} imagens)</i>\n\n` +
-      `Toque no botão abaixo pra pagar via <b>PIX</b> ou <b>cartão</b>. ` +
-      `Seus créditos são adicionados automaticamente assim que o pagamento for aprovado.`,
+    `📦 <b>${pkg.credits} créditos</b> — <b>${formatBrl(pkg.priceBrl)}</b>${bonusLabel}\n\n` +
+    `Toque no botão abaixo pra pagar via <b>PIX</b> ou <b>cartão</b>. ` +
+    `Seus créditos são adicionados automaticamente assim que o pagamento for aprovado.`,
     kb
   );
 });
@@ -401,10 +409,13 @@ bot.on(
   ],
   async (ctx) => {
     const id = ctx.from!.id;
-    if (!pending.has(id)) return;
-    const kb = new InlineKeyboard().text('❌ Cancelar', 'gen:cancel');
+    const kb = pending.has(id)
+      ? new InlineKeyboard().text('❌ Cancelar', 'gen:cancel')
+      : new InlineKeyboard()
+        .text('🎨 Gerar imagem', 'menu:gerar')
+        .text('🏠 Menu', 'menu:home');
     await ctx.reply(
-      '⚠️ Só aceito <b>imagem</b> (foto) ou <b>texto</b>. Envie uma foto com legenda ou apenas texto.',
+      '⚠️ Só aceito <b>imagem</b> (foto) ou <b>texto</b>. Toque em <b>🎨 Gerar imagem</b> e envie uma foto com legenda ou apenas texto.',
       { parse_mode: 'HTML', reply_markup: kb }
     );
   }
@@ -413,7 +424,17 @@ bot.on(
 bot.on('message:photo', async (ctx) => {
   const id = ctx.from!.id;
   const state = pending.get(id);
-  if (!state) return;
+  if (!state) {
+    const kb = new InlineKeyboard()
+      .text('🎨 Gerar imagem', 'menu:gerar')
+      .text('🏠 Menu', 'menu:home');
+    await ctx.reply(
+      `👋 Pra começar uma geração, toque em <b>🎨 Gerar imagem</b> (ou use /gerar). ` +
+      `Depois reenvie sua foto com a descrição na <b>legenda</b>.`,
+      { parse_mode: 'HTML', reply_markup: kb }
+    );
+    return;
+  }
 
   if (state.step === 'await_edit_prompt') {
     await ctx.reply(
@@ -450,8 +471,13 @@ bot.on('message:text', async (ctx) => {
   const id = ctx.from!.id;
   const state = pending.get(id);
   if (!state) {
-    const kb = new InlineKeyboard().text('🎨 Gerar imagem', 'menu:gerar');
-    await ctx.reply('Use o menu ou /start pra começar.', { reply_markup: kb });
+    const kb = new InlineKeyboard()
+      .text('🎨 Gerar imagem', 'menu:gerar')
+      .text('🏠 Menu', 'menu:home');
+    await ctx.reply(
+      `👋 Pra gerar uma imagem, toque em <b>🎨 Gerar imagem</b> (ou use /gerar) antes de enviar o prompt.`,
+      { parse_mode: 'HTML', reply_markup: kb }
+    );
     return;
   }
   const text = ctx.message.text.trim();
@@ -506,7 +532,6 @@ async function handleGenerate(
     lastGenerated.set(id, out);
 
     const remaining = getCredits(id);
-    const remainingImgs = Math.floor(remaining / CREDITS_PER_IMAGE);
     const token = saveHdUrl(out);
     const kb = resultKeyboard(token);
 
@@ -514,14 +539,14 @@ async function handleGenerate(
       caption:
         `✨ <b>Pronto!</b> Toque na imagem pra revelar.\n\n` +
         `💬 <i>${prompt.slice(0, 200)}</i>\n\n` +
-        `💎 Restam <b>${remaining}</b> créditos (${remainingImgs} ${remainingImgs === 1 ? 'imagem' : 'imagens'})`,
+        `💎 Restam <b>${remaining}</b> créditos`,
       parse_mode: 'HTML',
       has_spoiler: true,
       reply_markup: kb,
     });
     await ctx.api
       .deleteMessage(statusMsg.chat.id, statusMsg.message_id)
-      .catch(() => {});
+      .catch(() => { });
   } catch (err) {
     refundCredits(id, CREDITS_PER_IMAGE);
     logGeneration(id, prompt, 0);

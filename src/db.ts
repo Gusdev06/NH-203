@@ -37,9 +37,19 @@ if (generationsCols.some((c) => c.name === 'image_url')) {
 const usersCols = db
   .prepare("PRAGMA table_info(users)")
   .all() as { name: string }[];
-if (!usersCols.some((c) => c.name === 'banned')) {
+const hasUserCol = (name: string) => usersCols.some((c) => c.name === name);
+if (!hasUserCol('banned')) {
   db.exec('ALTER TABLE users ADD COLUMN banned INTEGER NOT NULL DEFAULT 0');
 }
+if (!hasUserCol('username')) db.exec('ALTER TABLE users ADD COLUMN username TEXT');
+if (!hasUserCol('first_name')) db.exec('ALTER TABLE users ADD COLUMN first_name TEXT');
+if (!hasUserCol('last_name')) db.exec('ALTER TABLE users ADD COLUMN last_name TEXT');
+if (!hasUserCol('is_premium'))
+  db.exec('ALTER TABLE users ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0');
+if (!hasUserCol('language_code'))
+  db.exec('ALTER TABLE users ADD COLUMN language_code TEXT');
+if (!hasUserCol('last_active')) db.exec('ALTER TABLE users ADD COLUMN last_active INTEGER');
+if (!hasUserCol('note')) db.exec('ALTER TABLE users ADD COLUMN note TEXT');
 
 const INITIAL_CREDITS = 5;
 
@@ -82,6 +92,39 @@ export function addCredits(telegramId: number, amount: number): void {
     amount,
     telegramId
   );
+}
+
+export function updateUserProfile(
+  telegramId: number,
+  profile: {
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    isPremium: boolean;
+    languageCode: string | null;
+  }
+): void {
+  db.prepare(
+    `UPDATE users SET
+       username = ?, first_name = ?, last_name = ?,
+       is_premium = ?, language_code = ?, last_active = ?
+     WHERE telegram_id = ?`
+  ).run(
+    profile.username,
+    profile.firstName,
+    profile.lastName,
+    profile.isPremium ? 1 : 0,
+    profile.languageCode,
+    Date.now(),
+    telegramId
+  );
+}
+
+export function setUserNote(telegramId: number, note: string | null): boolean {
+  const result = db
+    .prepare('UPDATE users SET note = ? WHERE telegram_id = ?')
+    .run(note, telegramId);
+  return result.changes === 1;
 }
 
 export type ProcessOrderResult =
@@ -140,6 +183,13 @@ export type AdminUser = {
   credits: number;
   created_at: number;
   banned: number;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  is_premium: number;
+  language_code: string | null;
+  last_active: number | null;
+  note: string | null;
 };
 export type AdminGeneration = {
   id: number;
@@ -157,20 +207,42 @@ export type AdminOrder = {
   created_at: number;
 };
 
+export type PackageSale = {
+  pkg_id: string;
+  count: number;
+  revenue: number;
+  credits: number;
+};
+
+export type TopSpender = AdminUser & {
+  total_spent: number;
+  orders_count: number;
+};
+
 export type AdminStats = {
   totals: {
     users: number;
+    activeUsers7d: number;
+    bannedUsers: number;
+    premiumUsers: number;
     creditsOutstanding: number;
     generationsOk: number;
     generationsFailed: number;
     generationsToday: number;
     revenueBrl: number;
+    revenueToday: number;
     ordersCount: number;
+    unmatchedOrders: number;
+    payingUsers: number;
   };
   recentUsers: AdminUser[];
   recentGenerations: AdminGeneration[];
   recentOrders: AdminOrder[];
+  topSpenders: TopSpender[];
+  unmatchedOrders: AdminOrder[];
+  packageSales: PackageSale[];
   dailyGenerations: { day: string; count: number }[];
+  dailyRevenue: { day: string; revenue: number }[];
 };
 
 function startOfTodayMs(): number {
@@ -179,12 +251,26 @@ function startOfTodayMs(): number {
   return d.getTime();
 }
 
+const USER_COLS =
+  'telegram_id, credits, created_at, banned, username, first_name, last_name, is_premium, language_code, last_active, note';
+
 export function getAdminStats(): AdminStats {
   const scalar = <T>(sql: string, ...args: unknown[]): T =>
     (db.prepare(sql).get(...args) as { v: T }).v;
 
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const startToday = startOfTodayMs();
+
   const totals = {
     users: scalar<number>('SELECT COUNT(*) AS v FROM users'),
+    activeUsers7d: scalar<number>(
+      'SELECT COUNT(*) AS v FROM users WHERE last_active >= ?',
+      sevenDaysAgo
+    ),
+    bannedUsers: scalar<number>('SELECT COUNT(*) AS v FROM users WHERE banned = 1'),
+    premiumUsers: scalar<number>(
+      'SELECT COUNT(*) AS v FROM users WHERE is_premium = 1'
+    ),
     creditsOutstanding: scalar<number>(
       'SELECT COALESCE(SUM(credits), 0) AS v FROM users'
     ),
@@ -196,17 +282,27 @@ export function getAdminStats(): AdminStats {
     ),
     generationsToday: scalar<number>(
       'SELECT COUNT(*) AS v FROM generations WHERE credits_spent > 0 AND created_at >= ?',
-      startOfTodayMs()
+      startToday
     ),
     revenueBrl: scalar<number>(
       'SELECT COALESCE(SUM(amount), 0) AS v FROM processed_orders'
     ),
+    revenueToday: scalar<number>(
+      'SELECT COALESCE(SUM(amount), 0) AS v FROM processed_orders WHERE created_at >= ?',
+      startToday
+    ),
     ordersCount: scalar<number>('SELECT COUNT(*) AS v FROM processed_orders'),
+    unmatchedOrders: scalar<number>(
+      'SELECT COUNT(*) AS v FROM processed_orders WHERE telegram_id IS NULL'
+    ),
+    payingUsers: scalar<number>(
+      'SELECT COUNT(DISTINCT telegram_id) AS v FROM processed_orders WHERE telegram_id IS NOT NULL'
+    ),
   };
 
   const recentUsers = db
     .prepare(
-      'SELECT telegram_id, credits, created_at, banned FROM users ORDER BY created_at DESC LIMIT 20'
+      `SELECT ${USER_COLS} FROM users ORDER BY created_at DESC LIMIT 20`
     )
     .all() as AdminUser[];
 
@@ -222,6 +318,36 @@ export function getAdminStats(): AdminStats {
     )
     .all() as AdminOrder[];
 
+  const topSpenders = db
+    .prepare(
+      `SELECT u.${USER_COLS.split(', ').join(', u.')},
+              COALESCE(SUM(o.amount), 0) AS total_spent,
+              COUNT(o.order_id) AS orders_count
+       FROM users u
+       JOIN processed_orders o ON o.telegram_id = u.telegram_id
+       GROUP BY u.telegram_id
+       ORDER BY total_spent DESC
+       LIMIT 10`
+    )
+    .all() as TopSpender[];
+
+  const unmatchedOrders = db
+    .prepare(
+      'SELECT order_id, telegram_id, pkg_id, credits, amount, created_at FROM processed_orders WHERE telegram_id IS NULL ORDER BY created_at DESC LIMIT 20'
+    )
+    .all() as AdminOrder[];
+
+  const packageSales = db
+    .prepare(
+      `SELECT pkg_id, COUNT(*) AS count, COALESCE(SUM(amount), 0) AS revenue,
+              COALESCE(SUM(credits), 0) AS credits
+       FROM processed_orders
+       WHERE pkg_id IS NOT NULL
+       GROUP BY pkg_id
+       ORDER BY revenue DESC`
+    )
+    .all() as PackageSale[];
+
   const since = Date.now() - 14 * 24 * 60 * 60 * 1000;
   const dailyGenerations = db
     .prepare(
@@ -232,12 +358,26 @@ export function getAdminStats(): AdminStats {
     )
     .all(since) as { day: string; count: number }[];
 
+  const dailyRevenue = db
+    .prepare(
+      `SELECT date(created_at/1000, 'unixepoch', 'localtime') AS day,
+              COALESCE(SUM(amount), 0) AS revenue
+       FROM processed_orders
+       WHERE created_at >= ?
+       GROUP BY day ORDER BY day ASC`
+    )
+    .all(since) as { day: string; revenue: number }[];
+
   return {
     totals,
     recentUsers,
     recentGenerations,
     recentOrders,
+    topSpenders,
+    unmatchedOrders,
+    packageSales,
     dailyGenerations,
+    dailyRevenue,
   };
 }
 
@@ -291,9 +431,7 @@ export type UserDetail = {
 
 export function getUserDetail(telegramId: number): UserDetail | null {
   const user = db
-    .prepare(
-      'SELECT telegram_id, credits, created_at, banned FROM users WHERE telegram_id = ?'
-    )
+    .prepare(`SELECT ${USER_COLS} FROM users WHERE telegram_id = ?`)
     .get(telegramId) as AdminUser | undefined;
   if (!user) return null;
 
@@ -331,6 +469,45 @@ export function getUserDetail(telegramId: number): UserDetail | null {
     orders,
     totals: { spent, generations: generationsOk, revenue },
   };
+}
+
+export function searchUsers(query: string): AdminUser[] {
+  const q = query.trim();
+  if (!q) {
+    return db
+      .prepare(
+        `SELECT ${USER_COLS} FROM users ORDER BY created_at DESC LIMIT 200`
+      )
+      .all() as AdminUser[];
+  }
+  const asNumber = Number(q.replace(/[^\d-]/g, ''));
+  const cleanUsername = q.replace(/^@+/, '');
+  const likeQ = `%${cleanUsername}%`;
+  return db
+    .prepare(
+      `SELECT ${USER_COLS} FROM users
+       WHERE telegram_id = ?
+          OR username LIKE ? COLLATE NOCASE
+          OR first_name LIKE ? COLLATE NOCASE
+          OR last_name LIKE ? COLLATE NOCASE
+          OR note LIKE ? COLLATE NOCASE
+       ORDER BY last_active DESC NULLS LAST, created_at DESC
+       LIMIT 200`
+    )
+    .all(asNumber || 0, likeQ, likeQ, likeQ, likeQ) as AdminUser[];
+}
+
+export function resolveUserTarget(raw: string): number | null {
+  const s = raw.trim();
+  if (!s) return null;
+  if (/^-?\d+$/.test(s)) return Number(s);
+  const cleanUsername = s.replace(/^@+/, '');
+  const row = db
+    .prepare(
+      'SELECT telegram_id FROM users WHERE username = ? COLLATE NOCASE LIMIT 1'
+    )
+    .get(cleanUsername) as { telegram_id: number } | undefined;
+  return row?.telegram_id ?? null;
 }
 
 export function getAllOrdersForCsv(): AdminOrder[] {

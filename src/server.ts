@@ -6,12 +6,16 @@ import {
   getUserDetail,
   adminAddCredits,
   setBanned,
+  setUserNote,
   getAllOrdersForCsv,
   getAllGenerationsForCsv,
+  searchUsers,
+  resolveUserTarget,
 } from './db.ts';
 import {
   renderAdminDashboard,
   renderUserDetail,
+  renderUsersList,
   renderNotFound,
   ordersToCsv,
   generationsToCsv,
@@ -108,14 +112,32 @@ async function handleAdmin(
     return;
   }
 
+  if (req.method === 'GET' && subPath === '/users') {
+    const q = query.get('q') ?? '';
+    const users = searchUsers(q);
+    sendHtml(res, 200, renderUsersList(users, basePath, q, flash));
+    return;
+  }
+
   if (req.method === 'POST' && subPath === '/credits') {
     const body = await readBody(req);
     const params = new URLSearchParams(body);
-    const tgId = Number(params.get('telegram_id'));
+    const targetRaw =
+      params.get('target') ?? params.get('telegram_id') ?? '';
     const amount = Number(params.get('amount'));
     const returnTo = params.get('return') ?? '/';
-    if (!Number.isInteger(tgId) || !Number.isInteger(amount)) {
-      redirect(res, buildFlashUrl(basePath, returnTo, { err: 'valores inválidos' }));
+    if (!Number.isInteger(amount) || amount === 0) {
+      redirect(res, buildFlashUrl(basePath, returnTo, { err: 'valor inválido' }));
+      return;
+    }
+    const tgId = resolveUserTarget(targetRaw);
+    if (!tgId) {
+      redirect(
+        res,
+        buildFlashUrl(basePath, returnTo, {
+          err: `usuário "${targetRaw}" não encontrado`,
+        })
+      );
       return;
     }
     const result = adminAddCredits(tgId, amount);
@@ -129,6 +151,31 @@ async function handleAdmin(
       buildFlashUrl(basePath, returnTo, {
         ok: `${Math.abs(amount)} créditos ${verb} — ${tgId} agora tem ${result.credits}`,
       })
+    );
+    return;
+  }
+
+  if (req.method === 'POST' && subPath === '/note') {
+    const body = await readBody(req);
+    const params = new URLSearchParams(body);
+    const tgId = Number(params.get('telegram_id'));
+    const note = (params.get('note') ?? '').trim();
+    const returnTo = params.get('return') ?? '/';
+    if (!Number.isInteger(tgId)) {
+      redirect(res, buildFlashUrl(basePath, returnTo, { err: 'id inválido' }));
+      return;
+    }
+    const ok = setUserNote(tgId, note === '' ? null : note);
+    if (!ok) {
+      redirect(
+        res,
+        buildFlashUrl(basePath, returnTo, { err: 'usuário não encontrado' })
+      );
+      return;
+    }
+    redirect(
+      res,
+      buildFlashUrl(basePath, returnTo, { ok: 'nota salva' })
     );
     return;
   }
