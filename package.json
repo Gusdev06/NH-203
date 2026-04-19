@@ -10,6 +10,7 @@
     "cakto:webhook": "tsx scripts/cakto-register-webhook.ts"
   },
   "dependencies": {
+    "@grammyjs/runner": "^2.0.3",
     "better-sqlite3": "^11.7.0",
     "dotenv": "^16.4.5",
     "grammy": "^1.30.0",

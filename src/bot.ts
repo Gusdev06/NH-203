@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { Bot, InlineKeyboard, type Context } from 'grammy';
+import { run, sequentialize } from '@grammyjs/runner';
 import {
   ensureUser,
   getCredits,
@@ -28,15 +29,25 @@ if (!process.env.REPLICATE_API_TOKEN)
 
 const bot = new Bot(token);
 
+bot.use(sequentialize((ctx) => ctx.chat?.id.toString()));
+
+const profileThrottle = new Map<number, number>();
+const PROFILE_TTL = 5 * 60 * 1000;
+
 bot.use(async (ctx, next) => {
   if (ctx.from && !ctx.from.is_bot) {
-    updateUserProfile(ctx.from.id, {
-      username: ctx.from.username ?? null,
-      firstName: ctx.from.first_name ?? null,
-      lastName: ctx.from.last_name ?? null,
-      isPremium: ctx.from.is_premium === true,
-      languageCode: ctx.from.language_code ?? null,
-    });
+    const now = Date.now();
+    const last = profileThrottle.get(ctx.from.id) ?? 0;
+    if (now - last > PROFILE_TTL) {
+      profileThrottle.set(ctx.from.id, now);
+      updateUserProfile(ctx.from.id, {
+        username: ctx.from.username ?? null,
+        firstName: ctx.from.first_name ?? null,
+        lastName: ctx.from.last_name ?? null,
+        isPremium: ctx.from.is_premium === true,
+        languageCode: ctx.from.language_code ?? null,
+      });
+    }
   }
   await next();
 });
@@ -576,6 +587,8 @@ bot.api
   ])
   .catch((err) => console.warn('Falha ao setar comandos:', err));
 
-bot.start({
-  onStart: (info) => console.log(`🔥 Bot @${info.username} rodando...`),
-});
+run(bot);
+bot.api
+  .getMe()
+  .then((me) => console.log(`🔥 Bot @${me.username} rodando (concurrent)...`))
+  .catch((err) => console.error('Falha ao iniciar bot:', err));
