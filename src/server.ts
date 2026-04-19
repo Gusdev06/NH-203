@@ -1,6 +1,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { Bot } from 'grammy';
 import { handleCaktoWebhook } from './webhook.ts';
+import { getAdminStats } from './db.ts';
+import { renderAdminDashboard } from './admin.ts';
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -14,13 +16,20 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 export function startServer(bot: Bot): void {
   const port = Number(process.env.WEBHOOK_PORT ?? 3000);
-  const secret = process.env.CAKTO_WEBHOOK_SECRET;
-  if (!secret) {
-    console.warn('⚠️  CAKTO_WEBHOOK_SECRET não configurado — webhook desativado.');
+  const webhookSecret = process.env.CAKTO_WEBHOOK_SECRET;
+  const adminToken = process.env.ADMIN_TOKEN;
+
+  if (!webhookSecret && !adminToken) {
+    console.warn(
+      '⚠️  Nem CAKTO_WEBHOOK_SECRET nem ADMIN_TOKEN configurados — servidor HTTP não iniciado.'
+    );
     return;
   }
 
-  const webhookPath = `/webhook/cakto/${secret}`;
+  const webhookPath = webhookSecret
+    ? `/webhook/cakto/${webhookSecret}`
+    : null;
+  const adminPath = adminToken ? `/admin/${adminToken}` : null;
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'GET' && req.url === '/health') {
@@ -28,7 +37,22 @@ export function startServer(bot: Bot): void {
       return;
     }
 
-    if (req.method === 'POST' && req.url === webhookPath) {
+    if (req.method === 'GET' && adminPath && req.url === adminPath) {
+      try {
+        const html = renderAdminDashboard(getAdminStats());
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store',
+        });
+        res.end(html);
+      } catch (err) {
+        console.error('[admin] erro:', err);
+        res.writeHead(500).end('error');
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && webhookPath && req.url === webhookPath) {
       try {
         const body = await readBody(req);
         const result = await handleCaktoWebhook(bot, body);
@@ -45,6 +69,13 @@ export function startServer(bot: Bot): void {
   });
 
   server.listen(port, () => {
-    console.log(`🌐 Webhook ouvindo em http://localhost:${port}${webhookPath}`);
+    if (webhookPath) {
+      console.log(`🌐 Webhook ouvindo em http://localhost:${port}${webhookPath}`);
+    } else {
+      console.warn('⚠️  CAKTO_WEBHOOK_SECRET não configurado — webhook desativado.');
+    }
+    if (adminPath) {
+      console.log(`📊 Admin em http://localhost:${port}${adminPath}`);
+    }
   });
 }

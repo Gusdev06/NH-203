@@ -127,3 +127,104 @@ export function logGeneration(
     'INSERT INTO generations (telegram_id, prompt, credits_spent, created_at) VALUES (?, ?, ?, ?)'
   ).run(telegramId, prompt, creditsSpent, Date.now());
 }
+
+export type AdminUser = { telegram_id: number; credits: number; created_at: number };
+export type AdminGeneration = {
+  id: number;
+  telegram_id: number;
+  prompt: string;
+  credits_spent: number;
+  created_at: number;
+};
+export type AdminOrder = {
+  order_id: string;
+  telegram_id: number | null;
+  pkg_id: string | null;
+  credits: number;
+  amount: number;
+  created_at: number;
+};
+
+export type AdminStats = {
+  totals: {
+    users: number;
+    creditsOutstanding: number;
+    generationsOk: number;
+    generationsFailed: number;
+    generationsToday: number;
+    revenueBrl: number;
+    ordersCount: number;
+  };
+  recentUsers: AdminUser[];
+  recentGenerations: AdminGeneration[];
+  recentOrders: AdminOrder[];
+  dailyGenerations: { day: string; count: number }[];
+};
+
+function startOfTodayMs(): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+export function getAdminStats(): AdminStats {
+  const scalar = <T>(sql: string, ...args: unknown[]): T =>
+    (db.prepare(sql).get(...args) as { v: T }).v;
+
+  const totals = {
+    users: scalar<number>('SELECT COUNT(*) AS v FROM users'),
+    creditsOutstanding: scalar<number>(
+      'SELECT COALESCE(SUM(credits), 0) AS v FROM users'
+    ),
+    generationsOk: scalar<number>(
+      'SELECT COUNT(*) AS v FROM generations WHERE credits_spent > 0'
+    ),
+    generationsFailed: scalar<number>(
+      'SELECT COUNT(*) AS v FROM generations WHERE credits_spent = 0'
+    ),
+    generationsToday: scalar<number>(
+      'SELECT COUNT(*) AS v FROM generations WHERE credits_spent > 0 AND created_at >= ?',
+      startOfTodayMs()
+    ),
+    revenueBrl: scalar<number>(
+      'SELECT COALESCE(SUM(amount), 0) AS v FROM processed_orders'
+    ),
+    ordersCount: scalar<number>('SELECT COUNT(*) AS v FROM processed_orders'),
+  };
+
+  const recentUsers = db
+    .prepare(
+      'SELECT telegram_id, credits, created_at FROM users ORDER BY created_at DESC LIMIT 20'
+    )
+    .all() as AdminUser[];
+
+  const recentGenerations = db
+    .prepare(
+      'SELECT id, telegram_id, prompt, credits_spent, created_at FROM generations ORDER BY created_at DESC LIMIT 20'
+    )
+    .all() as AdminGeneration[];
+
+  const recentOrders = db
+    .prepare(
+      'SELECT order_id, telegram_id, pkg_id, credits, amount, created_at FROM processed_orders ORDER BY created_at DESC LIMIT 20'
+    )
+    .all() as AdminOrder[];
+
+  const since = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  const dailyGenerations = db
+    .prepare(
+      `SELECT date(created_at/1000, 'unixepoch', 'localtime') AS day, COUNT(*) AS count
+       FROM generations
+       WHERE credits_spent > 0 AND created_at >= ?
+       GROUP BY day ORDER BY day ASC`
+    )
+    .all(since) as { day: string; count: number }[];
+
+  return {
+    totals,
+    recentUsers,
+    recentGenerations,
+    recentOrders,
+    dailyGenerations,
+  };
+}
