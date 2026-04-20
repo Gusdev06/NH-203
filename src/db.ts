@@ -51,7 +51,7 @@ if (!hasUserCol('language_code'))
 if (!hasUserCol('last_active')) db.exec('ALTER TABLE users ADD COLUMN last_active INTEGER');
 if (!hasUserCol('note')) db.exec('ALTER TABLE users ADD COLUMN note TEXT');
 
-const INITIAL_CREDITS = 5;
+const INITIAL_CREDITS = 0;
 
 export function ensureUser(telegramId: number): { credits: number; isNew: boolean } {
   const existing = db

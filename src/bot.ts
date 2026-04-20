@@ -235,13 +235,12 @@ async function startGenerate(ctx: Context, id: number) {
 
 bot.command('start', async (ctx) => {
   const id = ctx.from!.id;
-  const { isNew, credits } = ensureUser(id);
+  const { isNew } = ensureUser(id);
   if (isNew) {
-    const welcome =
-      credits > 0
-        ? `🔥 <b>Bem-vindo ao HOT!</b>\n\nVocê ganhou <b>${credits} créditos grátis</b> pra testar.`
-        : `🔥 <b>Bem-vindo ao HOT!</b>\n\nGere imagens incríveis com IA. Compre créditos pra começar.`;
-    await ctx.reply(welcome, { parse_mode: 'HTML' });
+    await ctx.reply(
+      `🔥 <b>Bem-vindo ao HOT!</b>\n\nGere imagens incríveis com IA. Compre créditos pra começar.`,
+      { parse_mode: 'HTML' }
+    );
   }
   await showHome(ctx, id);
 });
