@@ -89,6 +89,23 @@ export async function listOffers(productId?: string): Promise<CaktoOffer[]> {
   return data.results;
 }
 
+export async function createProduct(params: {
+  name: string;
+  price: number;
+  description?: string;
+}): Promise<CaktoProduct> {
+  return authed<CaktoProduct>('/public_api/products/', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: params.name,
+      price: params.price,
+      type: 'unique',
+      status: 'active',
+      description: params.description ?? params.name,
+    }),
+  });
+}
+
 export async function createOffer(params: {
   name: string;
   price: number;

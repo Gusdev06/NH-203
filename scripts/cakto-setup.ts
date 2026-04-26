@@ -4,6 +4,7 @@ import {
   listProducts,
   listOffers,
   createOffer,
+  createProduct,
   checkoutUrl,
 } from '../src/cakto.ts';
 import { PACKAGES, CREDITS_PER_IMAGE } from '../src/packages.ts';
@@ -30,11 +31,14 @@ async function main() {
       productId = active[0].id;
       console.log(`\n✅ Usando o único produto ativo: ${productId}`);
     } else if (active.length === 0) {
-      console.error(
-        '\n❌ Nenhum produto ativo na sua Cakto. Crie um produto no dashboard primeiro ' +
-          '(https://app.cakto.com.br) com conteúdo "telegram" ou similar, depois rode este script de novo.'
-      );
-      process.exit(1);
+      console.log('\n🆕 Nenhum produto ativo. Criando "HOT — Créditos Telegram"...');
+      const created = await createProduct({
+        name: 'HOT — Créditos Telegram',
+        price: 25,
+        description: 'Créditos para gerar imagens via bot do Telegram',
+      });
+      productId = created.id;
+      console.log(`   ↳ produto criado: ${productId}`);
     } else {
       console.error(
         '\n❌ Múltiplos produtos ativos. Defina CAKTO_PRODUCT_ID no .env com o ID do produto desejado.'
