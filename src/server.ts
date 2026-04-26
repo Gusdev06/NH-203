@@ -214,16 +214,18 @@ export function startServer(bot: Bot): void {
   const port = Number(process.env.WEBHOOK_PORT ?? 3000);
   const webhookSecret = process.env.CAKTO_WEBHOOK_SECRET;
   const adminToken = process.env.ADMIN_TOKEN;
+  const telegramSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 
-  if (!webhookSecret && !adminToken) {
+  if (!webhookSecret && !adminToken && !telegramSecret) {
     console.warn(
-      '⚠️  Nem CAKTO_WEBHOOK_SECRET nem ADMIN_TOKEN configurados — servidor HTTP não iniciado.'
+      '⚠️  Nenhum secret configurado (CAKTO/ADMIN/TELEGRAM) — servidor HTTP não iniciado.'
     );
     return;
   }
 
   const webhookPath = webhookSecret ? `/webhook/cakto/${webhookSecret}` : null;
   const adminPrefix = adminToken ? `/admin/${adminToken}` : null;
+  const telegramPath = telegramSecret ? `/telegram/${telegramSecret}` : null;
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const rawUrl = req.url ?? '/';
@@ -261,14 +263,37 @@ export function startServer(bot: Bot): void {
       return;
     }
 
+    if (req.method === 'POST' && telegramPath && pathname === telegramPath) {
+      const headerToken = req.headers['x-telegram-bot-api-secret-token'];
+      if (headerToken !== telegramSecret) {
+        res.writeHead(401).end('unauthorized');
+        return;
+      }
+      try {
+        const body = await readBody(req);
+        const update = JSON.parse(body);
+        res.writeHead(200).end('ok');
+        bot
+          .handleUpdate(update)
+          .catch((err) => console.error('[telegram] handleUpdate falhou:', err));
+      } catch (err) {
+        console.error('[telegram] erro parseando update:', err);
+        if (!res.headersSent) res.writeHead(400).end('bad request');
+      }
+      return;
+    }
+
     res.writeHead(404).end('not found');
   });
 
   server.listen(port, () => {
     if (webhookPath) {
-      console.log(`🌐 Webhook ouvindo em http://localhost:${port}${webhookPath}`);
+      console.log(`🌐 Webhook Cakto ouvindo em http://localhost:${port}${webhookPath}`);
     } else {
-      console.warn('⚠️  CAKTO_WEBHOOK_SECRET não configurado — webhook desativado.');
+      console.warn('⚠️  CAKTO_WEBHOOK_SECRET não configurado — webhook Cakto desativado.');
+    }
+    if (telegramPath) {
+      console.log(`📨 Webhook Telegram ouvindo em http://localhost:${port}${telegramPath}`);
     }
     if (adminPrefix) {
       console.log(`📊 Admin em http://localhost:${port}${adminPrefix}`);

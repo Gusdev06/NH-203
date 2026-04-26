@@ -586,8 +586,29 @@ bot.api
   ])
   .catch((err) => console.warn('Falha ao setar comandos:', err));
 
-run(bot);
-bot.api
-  .getMe()
-  .then((me) => console.log(`🔥 Bot @${me.username} rodando (concurrent)...`))
-  .catch((err) => console.error('Falha ao iniciar bot:', err));
+const telegramSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+const webhookBaseUrl = process.env.WEBHOOK_BASE_URL?.replace(/\/$/, '');
+
+async function start() {
+  await bot.init();
+  const username = bot.botInfo.username;
+
+  if (telegramSecret && webhookBaseUrl) {
+    const url = `${webhookBaseUrl}/telegram/${telegramSecret}`;
+    await bot.api.setWebhook(url, {
+      secret_token: telegramSecret,
+      drop_pending_updates: false,
+      allowed_updates: ['message', 'callback_query'],
+    });
+    console.log(`🔥 Bot @${username} rodando (webhook → ${url})`);
+  } else {
+    await bot.api.deleteWebhook({ drop_pending_updates: false }).catch(() => { });
+    run(bot);
+    console.log(`🔥 Bot @${username} rodando (long polling)`);
+  }
+}
+
+start().catch((err) => {
+  console.error('Falha ao iniciar bot:', err);
+  process.exit(1);
+});
