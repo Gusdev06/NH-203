@@ -9,6 +9,7 @@ import {
   logGeneration,
   isBanned,
   updateUserProfile,
+  processOrder,
 } from './db.ts';
 import { generateImage } from './replicate.ts';
 import {
@@ -197,7 +198,7 @@ function packagesMessage(currency: Currency, lang: Lang): { text: string; keyboa
   }
   const switchLabel =
     currency === 'BRL'
-      ? (lang === 'pt' ? '💱 Pay in US$' : '💱 Pay in US$')
+      ? (lang === 'pt' ? '💱 Pagar com ⭐ Stars' : '💱 Pay with ⭐ Stars')
       : (lang === 'pt' ? '💱 Pagar em R$' : '💱 Pay in R$');
   keyboard.text(switchLabel, 'currency:switch').row();
   keyboard.text(s('back', lang), 'menu:home');
@@ -416,9 +417,9 @@ bot.callbackQuery('gen:edit', async (ctx) => {
 bot.callbackQuery('currency:switch', async (ctx) => {
   const id = ctx.from!.id;
   const current = getCurrency(ctx);
-  const next: Currency = current === 'BRL' ? 'USD' : 'BRL';
+  const next: Currency = current === 'BRL' ? 'XTR' : 'BRL';
   userCurrency.set(id, next);
-  await ctx.answerCallbackQuery(next === 'USD' ? '💱 USD' : '💱 BRL');
+  await ctx.answerCallbackQuery(next === 'XTR' ? '💱 ⭐ Stars' : '💱 R$');
   await showPackages(ctx);
 });
 
@@ -430,6 +431,44 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery(lang === 'pt' ? 'Pacote inválido.' : 'Invalid package.');
     return;
   }
+
+  const userId = ctx.from!.id;
+  const bonusCredits = pkg.bonusImages
+    ? pkg.bonusImages * PKG_CREDITS_PER_IMAGE
+    : 0;
+  const creditsWord = lang === 'pt' ? 'créditos' : 'credits';
+  const bonusLabel = bonusCredits
+    ? lang === 'pt'
+      ? ` 🎁 +${bonusCredits} créditos bônus`
+      : ` 🎁 +${bonusCredits} bonus credits`
+    : '';
+
+  // Telegram Stars flow — native invoice inside Telegram
+  if (pkg.currency === 'XTR') {
+    await ctx.answerCallbackQuery();
+    const title = lang === 'pt'
+      ? `${pkg.credits} créditos`
+      : `${pkg.credits} credits`;
+    const description = lang === 'pt'
+      ? `Pacote de ${pkg.credits} créditos para gerar imagens com IA${bonusLabel ? '. ' + bonusLabel.trim() : ''}.`
+      : `Pack of ${pkg.credits} credits to generate AI images${bonusLabel ? '. ' + bonusLabel.trim() : ''}.`;
+    try {
+      await ctx.api.sendInvoice(
+        ctx.chat!.id,
+        title,
+        description,
+        `${pkgId}:${userId}`,
+        'XTR',
+        [{ label: title, amount: pkg.price }]
+      );
+    } catch (err) {
+      console.error('[bot] Stars sendInvoice falhou:', err);
+      await ctx.reply(lang === 'pt' ? '⚠️ Erro ao gerar invoice.' : '⚠️ Error creating invoice.');
+    }
+    return;
+  }
+
+  // BRL flow — Perfect Pay external checkout
   const offer = getOffer(pkgId);
   await ctx.answerCallbackQuery();
 
@@ -438,7 +477,6 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
     return;
   }
 
-  const userId = ctx.from!.id;
   const tag = `tg_${userId}_${pkgId}`;
   const checkoutUrl =
     `${offer.url}?utm_source=telegram&utm_campaign=hot_bot` +
@@ -453,15 +491,6 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
     .row()
     .text(otherPkgsLabel, 'menu:comprar');
 
-  const bonusCredits = pkg.bonusImages
-    ? pkg.bonusImages * PKG_CREDITS_PER_IMAGE
-    : 0;
-  const creditsWord = lang === 'pt' ? 'créditos' : 'credits';
-  const bonusLabel = bonusCredits
-    ? lang === 'pt'
-      ? ` 🎁 +${bonusCredits} créditos bônus`
-      : ` 🎁 +${bonusCredits} bonus credits`
-    : '';
   const body = lang === 'pt'
     ? `Toque no botão abaixo pra pagar via <b>PIX</b> ou <b>cartão</b>. Seus créditos são adicionados automaticamente assim que o pagamento for aprovado.`
     : `Tap the button below to pay by <b>card</b>. Your credits are added automatically as soon as the payment is approved.`;
@@ -469,6 +498,59 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
     ctx,
     `📦 <b>${pkg.credits} ${creditsWord}</b> — <b>${priceLabel}</b>${bonusLabel}\n\n${body}`,
     kb
+  );
+});
+
+// ───────────────────── Telegram Stars handlers ─────────────────────
+
+bot.on('pre_checkout_query', async (ctx) => {
+  try {
+    await ctx.answerPreCheckoutQuery(true);
+  } catch (err) {
+    console.error('[bot] answerPreCheckoutQuery falhou:', err);
+  }
+});
+
+bot.on(':successful_payment', async (ctx) => {
+  const sp = ctx.message?.successful_payment;
+  if (!sp) return;
+
+  const [pkgId] = (sp.invoice_payload || '').split(':');
+  const pkg = findPackage(pkgId);
+  if (!pkg) {
+    console.warn(`[stars] pkg ${pkgId} desconhecido — payload=${sp.invoice_payload}`);
+    return;
+  }
+
+  const telegramId = ctx.from!.id;
+  const orderId = sp.telegram_payment_charge_id || sp.provider_payment_charge_id || `${telegramId}-${Date.now()}`;
+
+  const result = processOrder({
+    orderId,
+    telegramId,
+    pkgId,
+    credits: pkg.credits,
+    amount: pkg.price,
+    rawPayload: JSON.stringify(sp),
+  });
+
+  if (result.status === 'duplicate') {
+    console.log(`[stars] order ${orderId} já processada — ignorando`);
+    return;
+  }
+
+  const lang = getLang(ctx);
+  const images = pkg.credits / CREDITS_PER_IMAGE;
+  const msg = lang === 'pt'
+    ? `✅ Pagamento confirmado!\n\n${pkg.credits} créditos (${images} imagens) foram adicionados à sua conta.\n\nUse /gerar pra criar sua primeira imagem.`
+    : `✅ Payment confirmed!\n\n${pkg.credits} credits (${images} images) were added to your account.\n\nUse /gerar to create your first image.`;
+  try {
+    await ctx.reply(msg);
+  } catch (err) {
+    console.warn('[stars] falha ao notificar usuário:', err);
+  }
+  console.log(
+    `[stars] creditado: user=${telegramId} pkg=${pkgId} credits=${pkg.credits} stars=${pkg.price} order=${orderId}`
   );
 });
 
@@ -665,7 +747,7 @@ async function start() {
     await bot.api.setWebhook(url, {
       secret_token: telegramSecret,
       drop_pending_updates: false,
-      allowed_updates: ['message', 'callback_query'],
+      allowed_updates: ['message', 'callback_query', 'pre_checkout_query'],
     });
     console.log(`🔥 Bot @${username} rodando (webhook → ${url})`);
   } else {

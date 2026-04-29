@@ -1,4 +1,4 @@
-export type Currency = 'BRL' | 'USD';
+export type Currency = 'BRL' | 'XTR';
 
 export type CreditPackage = {
   id: string;
@@ -21,37 +21,34 @@ export const PACKAGES_BRL: CreditPackage[] = [
   { id: 'p300', credits: 1250, price: 300, currency: 'BRL', bonusImages: 70 },
 ];
 
-export const PACKAGES_USD: CreditPackage[] = [
-  { id: 'u5', credits: 75, price: 5, currency: 'USD' },
-  { id: 'u10', credits: 150, price: 10, currency: 'USD' },
-  { id: 'u15', credits: 250, price: 15, currency: 'USD', bonusImages: 5 },
-  { id: 'u20', credits: 350, price: 20, currency: 'USD', bonusImages: 10 },
-  { id: 'u30', credits: 550, price: 30, currency: 'USD', bonusImages: 20 },
-  { id: 'u40', credits: 800, price: 40, currency: 'USD', bonusImages: 40 },
-  { id: 'u60', credits: 1250, price: 60, currency: 'USD', bonusImages: 70 },
+export const PACKAGES_XTR: CreditPackage[] = [
+  { id: 'x250', credits: 75, price: 250, currency: 'XTR' },
+  { id: 'x500', credits: 150, price: 500, currency: 'XTR' },
+  { id: 'x750', credits: 250, price: 750, currency: 'XTR', bonusImages: 5 },
+  { id: 'x1000', credits: 350, price: 1000, currency: 'XTR', bonusImages: 10 },
+  { id: 'x1500', credits: 550, price: 1500, currency: 'XTR', bonusImages: 20 },
+  { id: 'x2000', credits: 800, price: 2000, currency: 'XTR', bonusImages: 40 },
+  { id: 'x3000', credits: 1250, price: 3000, currency: 'XTR', bonusImages: 70 },
 ];
 
-export const PACKAGES: CreditPackage[] = [...PACKAGES_BRL, ...PACKAGES_USD];
+export const PACKAGES: CreditPackage[] = [...PACKAGES_BRL, ...PACKAGES_XTR];
 
 export function findPackage(id: string): CreditPackage | undefined {
   return PACKAGES.find((p) => p.id === id);
 }
 
 export function packagesFor(currency: Currency): CreditPackage[] {
-  return currency === 'USD' ? PACKAGES_USD : PACKAGES_BRL;
+  return currency === 'XTR' ? PACKAGES_XTR : PACKAGES_BRL;
 }
 
 export function currencyForLanguage(languageCode: string | null | undefined): Currency {
-  if (!languageCode) return 'USD';
-  return /^pt(-|$)/i.test(languageCode) ? 'BRL' : 'USD';
+  if (!languageCode) return 'XTR';
+  return /^pt(-|$)/i.test(languageCode) ? 'BRL' : 'XTR';
 }
 
 export function formatPrice(value: number, currency: Currency): string {
-  if (currency === 'USD') {
-    return value.toLocaleString('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    });
+  if (currency === 'XTR') {
+    return `⭐ ${value.toLocaleString('en-US')}`;
   }
   return value.toLocaleString('pt-BR', {
     style: 'currency',
