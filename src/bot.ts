@@ -12,15 +12,78 @@ import {
 } from './db.ts';
 import { generateImage } from './replicate.ts';
 import {
-  PACKAGES,
   findPackage,
-  formatBrl,
+  formatPrice,
+  packagesFor,
+  currencyForLanguage,
+  type Currency,
   CREDITS_PER_IMAGE as PKG_CREDITS_PER_IMAGE,
 } from './packages.ts';
 import { getOffer } from './perfectpay-offers.ts';
 import { startServer } from './server.ts';
 
 const CREDITS_PER_IMAGE = 5;
+
+type Lang = 'pt' | 'en';
+
+const userCurrency = new Map<number, Currency>();
+
+function langFromCurrency(c: Currency): Lang {
+  return c === 'BRL' ? 'pt' : 'en';
+}
+
+function getCurrency(ctx: Context): Currency {
+  const id = ctx.from?.id;
+  if (id && userCurrency.has(id)) return userCurrency.get(id)!;
+  return currencyForLanguage(ctx.from?.language_code);
+}
+
+function getLang(ctx: Context): Lang {
+  return langFromCurrency(getCurrency(ctx));
+}
+
+const STR = {
+  welcomeNew: {
+    pt: '🔥 <b>Bem-vindo ao HOT!</b>\n\nGere imagens incríveis com IA. Compre créditos pra começar.',
+    en: "🔥 <b>Welcome to HOT!</b>\n\nGenerate amazing AI images. Buy credits to get started.",
+  },
+  mainMenu: (credits: number, lang: Lang) =>
+    lang === 'pt'
+      ? `🔥 <b>HOT</b> — gerador de imagens IA\n\n💎 Seus créditos: <b>${credits}</b>\n🎨 Cada geração custa <b>${CREDITS_PER_IMAGE} créditos</b>\n\nEscolha uma opção abaixo:`
+      : `🔥 <b>HOT</b> — AI image generator\n\n💎 Your credits: <b>${credits}</b>\n🎨 Each generation costs <b>${CREDITS_PER_IMAGE} credits</b>\n\nChoose an option below:`,
+  generate: { pt: '🎨 Gerar imagem', en: '🎨 Generate image' },
+  buy: { pt: '💳 Comprar créditos', en: '💳 Buy credits' },
+  balance: { pt: '💎 Meu saldo', en: '💎 My balance' },
+  help: { pt: '❓ Ajuda', en: '❓ Help' },
+  back: { pt: '⬅️ Voltar', en: '⬅️ Back' },
+  home: { pt: '🏠 Menu', en: '🏠 Menu' },
+  cancel: { pt: '❌ Cancelar', en: '❌ Cancel' },
+  packagesTitle: { pt: '💳 <b>Pacotes de créditos</b>', en: '💳 <b>Credit packages</b>' },
+  switchCurrency: { pt: '💱 Pagar em US$', en: '💱 Pay in R$' },
+  insufficientTitle: { pt: '⚠️ <b>Créditos insuficientes</b>', en: '⚠️ <b>Insufficient credits</b>' },
+  insufficient: (have: number, need: number, lang: Lang) =>
+    lang === 'pt'
+      ? `Você tem <b>${have}</b>, precisa de <b>${need}</b>.`
+      : `You have <b>${have}</b>, need <b>${need}</b>.`,
+  balanceTitle: { pt: '💎 <b>Seu saldo</b>', en: '💎 <b>Your balance</b>' },
+  credits: { pt: 'Créditos', en: 'Credits' },
+  generateNow: { pt: '🎨 Gerar agora', en: '🎨 Generate now' },
+  buyMore: { pt: '💳 Comprar mais', en: '💳 Buy more' },
+  newGen: { pt: '🎨 <b>Nova geração</b>', en: '🎨 <b>New generation</b>' },
+  sendOne: {
+    pt: 'Agora envie <b>uma única mensagem</b>:\n• <b>Imagem + legenda</b> (a legenda é o prompt), ou\n• <b>Apenas texto</b> (sem imagem de referência)\n\n💡 Pra enviar imagem com prompt: anexe a foto e digite a descrição no campo de legenda antes de mandar.',
+    en: 'Now send <b>a single message</b>:\n• <b>Image + caption</b> (the caption is the prompt), or\n• <b>Text only</b> (no reference image)\n\n💡 To send image with prompt: attach the photo and type the description in the caption field before sending.',
+  },
+  paid: (credits: number, images: number, lang: Lang) =>
+    lang === 'pt'
+      ? `✅ Pagamento confirmado!\n\n${credits} créditos (${images} imagens) foram adicionados à sua conta.\n\nUse /gerar pra criar sua primeira imagem.`
+      : `✅ Payment confirmed!\n\n${credits} credits (${images} images) were added to your account.\n\nUse /gerar to create your first image.`,
+};
+
+function s<K extends keyof typeof STR>(key: K, lang: Lang): typeof STR[K] extends Record<Lang, string> ? string : never {
+  const entry = STR[key] as { pt: string; en: string };
+  return entry[lang] as never;
+}
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN não configurado no .env');
@@ -109,34 +172,36 @@ async function getTelegramFileUrl(ctx: Context, fileId: string): Promise<string 
 
 // ───────────────────── helpers ─────────────────────
 
-function mainMenu(credits: number): { text: string; keyboard: InlineKeyboard } {
-  const text =
-    `🔥 <b>HOT</b> — gerador de imagens IA\n\n` +
-    `💎 Seus créditos: <b>${credits}</b>\n` +
-    `🎨 Cada geração custa <b>${CREDITS_PER_IMAGE} créditos</b>\n\n` +
-    `Escolha uma opção abaixo:`;
+function mainMenu(credits: number, lang: Lang): { text: string; keyboard: InlineKeyboard } {
+  const text = STR.mainMenu(credits, lang);
   const keyboard = new InlineKeyboard()
-    .text('🎨 Gerar imagem', 'menu:gerar')
+    .text(s('generate', lang), 'menu:gerar')
     .row()
-    .text('💳 Comprar créditos', 'menu:comprar')
-    .text('💎 Meu saldo', 'menu:saldo')
+    .text(s('buy', lang), 'menu:comprar')
+    .text(s('balance', lang), 'menu:saldo')
     .row()
-    .text('❓ Ajuda', 'menu:ajuda');
+    .text(s('help', lang), 'menu:ajuda');
   return { text, keyboard };
 }
 
-function packagesMessage(): { text: string; keyboard: InlineKeyboard } {
+function packagesMessage(currency: Currency, lang: Lang): { text: string; keyboard: InlineKeyboard } {
   const keyboard = new InlineKeyboard();
-  for (const pkg of PACKAGES) {
+  const creditsLabel = lang === 'pt' ? 'créditos' : 'credits';
+  for (const pkg of packagesFor(currency)) {
     const bonusCredits = pkg.bonusImages
       ? pkg.bonusImages * PKG_CREDITS_PER_IMAGE
       : 0;
     const bonusLabel = bonusCredits ? ` 🎁 +${bonusCredits}` : '';
-    const label = `${formatBrl(pkg.priceBrl)} • ${pkg.credits} créditos${bonusLabel}`;
+    const label = `${formatPrice(pkg.price, pkg.currency)} • ${pkg.credits} ${creditsLabel}${bonusLabel}`;
     keyboard.text(label, `buy:${pkg.id}`).row();
   }
-  keyboard.text('⬅️ Voltar', 'menu:home');
-  return { text: '💳 <b>Pacotes de créditos</b>', keyboard };
+  const switchLabel =
+    currency === 'BRL'
+      ? (lang === 'pt' ? '💱 Pay in US$' : '💱 Pay in US$')
+      : (lang === 'pt' ? '💱 Pagar em R$' : '💱 Pay in R$');
+  keyboard.text(switchLabel, 'currency:switch').row();
+  keyboard.text(s('back', lang), 'menu:home');
+  return { text: s('packagesTitle', lang), keyboard };
 }
 
 async function editOrReply(
@@ -161,74 +226,58 @@ async function editOrReply(
 
 async function showHome(ctx: Context, id: number) {
   ensureUser(id);
-  const { text, keyboard } = mainMenu(getCredits(id));
+  const lang = getLang(ctx);
+  const { text, keyboard } = mainMenu(getCredits(id), lang);
   await editOrReply(ctx, text, keyboard);
 }
 
 async function showPackages(ctx: Context) {
-  const { text, keyboard } = packagesMessage();
+  const lang = getLang(ctx);
+  const currency = getCurrency(ctx);
+  const { text, keyboard } = packagesMessage(currency, lang);
   await editOrReply(ctx, text, keyboard);
 }
 
 async function showSaldo(ctx: Context, id: number) {
   ensureUser(id);
+  const lang = getLang(ctx);
   const credits = getCredits(id);
-  const text =
-    `💎 <b>Seu saldo</b>\n\n` +
-    `Créditos: <b>${credits}</b>`;
+  const text = `${s('balanceTitle', lang)}\n\n${s('credits', lang)}: <b>${credits}</b>`;
   const kb = new InlineKeyboard()
-    .text('🎨 Gerar agora', 'menu:gerar')
-    .text('💳 Comprar mais', 'menu:comprar')
+    .text(s('generateNow', lang), 'menu:gerar')
+    .text(s('buyMore', lang), 'menu:comprar')
     .row()
-    .text('⬅️ Voltar', 'menu:home');
+    .text(s('back', lang), 'menu:home');
   await editOrReply(ctx, text, kb);
 }
 
 async function showAjuda(ctx: Context) {
-  const text =
-    `❓ <b>Como funciona</b>\n\n` +
-    `1️⃣ Compre créditos (a partir de R$ 25)\n` +
-    `2️⃣ Toque em <b>Gerar imagem</b>\n` +
-    `3️⃣ Envie uma imagem de referência (opcional)\n` +
-    `4️⃣ Descreva o que quer na imagem\n` +
-    `5️⃣ Receba em segundos!\n\n` +
-    `⚡ Cada geração usa <b>${CREDITS_PER_IMAGE} créditos</b>\n` +
-    `<b>Comandos</b>\n` +
-    `/gerar — abrir fluxo de geração\n` +
-    `/saldo — ver créditos\n` +
-    `/comprar — comprar pacote\n` +
-    `/cancelar — abortar fluxo atual\n` +
-    `/start — voltar ao menu`;
-  const kb = new InlineKeyboard().text('⬅️ Voltar', 'menu:home');
+  const lang = getLang(ctx);
+  const text = lang === 'pt'
+    ? `❓ <b>Como funciona</b>\n\n1️⃣ Compre créditos\n2️⃣ Toque em <b>Gerar imagem</b>\n3️⃣ Envie uma imagem de referência (opcional)\n4️⃣ Descreva o que quer na imagem\n5️⃣ Receba em segundos!\n\n⚡ Cada geração usa <b>${CREDITS_PER_IMAGE} créditos</b>\n<b>Comandos</b>\n/gerar — abrir fluxo de geração\n/saldo — ver créditos\n/comprar — comprar pacote\n/cancelar — abortar fluxo atual\n/start — voltar ao menu`
+    : `❓ <b>How it works</b>\n\n1️⃣ Buy credits\n2️⃣ Tap <b>Generate image</b>\n3️⃣ Send a reference image (optional)\n4️⃣ Describe what you want\n5️⃣ Get it in seconds!\n\n⚡ Each generation uses <b>${CREDITS_PER_IMAGE} credits</b>\n<b>Commands</b>\n/gerar — open generation flow\n/saldo — see credits\n/comprar — buy a package\n/cancelar — abort current flow\n/start — back to menu`;
+  const kb = new InlineKeyboard().text(s('back', lang), 'menu:home');
   await editOrReply(ctx, text, kb);
 }
 
 async function startGenerate(ctx: Context, id: number) {
   ensureUser(id);
+  const lang = getLang(ctx);
   if (getCredits(id) < CREDITS_PER_IMAGE) {
     const kb = new InlineKeyboard()
-      .text('💳 Comprar créditos', 'menu:comprar')
+      .text(s('buy', lang), 'menu:comprar')
       .row()
-      .text('⬅️ Voltar', 'menu:home');
+      .text(s('back', lang), 'menu:home');
     await editOrReply(
       ctx,
-      `⚠️ <b>Créditos insuficientes</b>\n\n` +
-      `Você tem <b>${getCredits(id)}</b>, precisa de <b>${CREDITS_PER_IMAGE}</b>.`,
+      `${s('insufficientTitle', lang)}\n\n${STR.insufficient(getCredits(id), CREDITS_PER_IMAGE, lang)}`,
       kb
     );
     return;
   }
   pending.set(id, { step: 'await_input' });
-  const kb = new InlineKeyboard().text('❌ Cancelar', 'gen:cancel');
-  await editOrReply(
-    ctx,
-    `🎨 <b>Nova geração</b>\n\n` +
-    `Agora envie <b>uma única mensagem</b>:\n` +
-    `• <b>Imagem + legenda</b> (a legenda é o prompt), ou\n` +
-    `• <b>Apenas texto</b> (sem imagem de referência)\n\n` +
-    `💡 Pra enviar imagem com prompt: anexe a foto e digite a descrição no campo de legenda antes de mandar.`,
-    kb
-  );
+  const kb = new InlineKeyboard().text(s('cancel', lang), 'gen:cancel');
+  await editOrReply(ctx, `${s('newGen', lang)}\n\n${s('sendOne', lang)}`, kb);
 }
 
 // ───────────────────── commands ─────────────────────
@@ -236,11 +285,9 @@ async function startGenerate(ctx: Context, id: number) {
 bot.command('start', async (ctx) => {
   const id = ctx.from!.id;
   const { isNew } = ensureUser(id);
+  const lang = getLang(ctx);
   if (isNew) {
-    await ctx.reply(
-      `🔥 <b>Bem-vindo ao HOT!</b>\n\nGere imagens incríveis com IA. Compre créditos pra começar.`,
-      { parse_mode: 'HTML' }
-    );
+    await ctx.reply(s('welcomeNew', lang), { parse_mode: 'HTML' });
   }
   await showHome(ctx, id);
 });
@@ -366,18 +413,28 @@ bot.callbackQuery('gen:edit', async (ctx) => {
   );
 });
 
+bot.callbackQuery('currency:switch', async (ctx) => {
+  const id = ctx.from!.id;
+  const current = getCurrency(ctx);
+  const next: Currency = current === 'BRL' ? 'USD' : 'BRL';
+  userCurrency.set(id, next);
+  await ctx.answerCallbackQuery(next === 'USD' ? '💱 USD' : '💱 BRL');
+  await showPackages(ctx);
+});
+
 bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
   const pkgId = ctx.match[1];
   const pkg = findPackage(pkgId);
+  const lang = getLang(ctx);
   if (!pkg) {
-    await ctx.answerCallbackQuery('Pacote inválido.');
+    await ctx.answerCallbackQuery(lang === 'pt' ? 'Pacote inválido.' : 'Invalid package.');
     return;
   }
   const offer = getOffer(pkgId);
   await ctx.answerCallbackQuery();
 
   if (!offer) {
-    await ctx.reply('⚠️ Checkout ainda não configurado.');
+    await ctx.reply(lang === 'pt' ? '⚠️ Checkout ainda não configurado.' : '⚠️ Checkout not configured yet.');
     return;
   }
 
@@ -387,20 +444,30 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
     `${offer.url}?utm_source=telegram&utm_campaign=hot_bot` +
     `&utm_content=${tag}&src=${tag}`;
 
+  const priceLabel = formatPrice(pkg.price, pkg.currency);
+  const payLabel = lang === 'pt' ? `💳 Pagar ${priceLabel}` : `💳 Pay ${priceLabel}`;
+  const otherPkgsLabel = lang === 'pt' ? '⬅️ Outros pacotes' : '⬅️ Other packages';
+
   const kb = new InlineKeyboard()
-    .url(`💳 Pagar ${formatBrl(pkg.priceBrl)}`, checkoutUrl)
+    .url(payLabel, checkoutUrl)
     .row()
-    .text('⬅️ Outros pacotes', 'menu:comprar');
+    .text(otherPkgsLabel, 'menu:comprar');
 
   const bonusCredits = pkg.bonusImages
     ? pkg.bonusImages * PKG_CREDITS_PER_IMAGE
     : 0;
-  const bonusLabel = bonusCredits ? ` 🎁 +${bonusCredits} créditos bônus` : '';
+  const creditsWord = lang === 'pt' ? 'créditos' : 'credits';
+  const bonusLabel = bonusCredits
+    ? lang === 'pt'
+      ? ` 🎁 +${bonusCredits} créditos bônus`
+      : ` 🎁 +${bonusCredits} bonus credits`
+    : '';
+  const body = lang === 'pt'
+    ? `Toque no botão abaixo pra pagar via <b>PIX</b> ou <b>cartão</b>. Seus créditos são adicionados automaticamente assim que o pagamento for aprovado.`
+    : `Tap the button below to pay by <b>card</b>. Your credits are added automatically as soon as the payment is approved.`;
   await editOrReply(
     ctx,
-    `📦 <b>${pkg.credits} créditos</b> — <b>${formatBrl(pkg.priceBrl)}</b>${bonusLabel}\n\n` +
-    `Toque no botão abaixo pra pagar via <b>PIX</b> ou <b>cartão</b>. ` +
-    `Seus créditos são adicionados automaticamente assim que o pagamento for aprovado.`,
+    `📦 <b>${pkg.credits} ${creditsWord}</b> — <b>${priceLabel}</b>${bonusLabel}\n\n${body}`,
     kb
   );
 });

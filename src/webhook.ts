@@ -151,7 +151,7 @@ export async function handleCaktoWebhook(
     telegramId,
     pkgId,
     credits: pkg.credits,
-    amount: data.amount ?? pkg.priceBrl,
+    amount: data.amount ?? pkg.price,
     rawPayload: rawBody,
   });
 

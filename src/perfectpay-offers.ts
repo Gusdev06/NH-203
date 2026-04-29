@@ -7,19 +7,24 @@ export type PerfectPayOfferInfo = {
   price: number;
 };
 
-const path = new URL('./perfectpay-offers.json', import.meta.url);
+const brlPath = new URL('./perfectpay-offers.json', import.meta.url);
+const usdPath = new URL('./perfectpay-offers-usd.json', import.meta.url);
 
-let cache: Record<string, PerfectPayOfferInfo> | null = null;
+let brlCache: Record<string, PerfectPayOfferInfo> | null = null;
+let usdCache: Record<string, PerfectPayOfferInfo> | null = null;
+
+function loadFile(path: URL, label: string): Record<string, PerfectPayOfferInfo> {
+  if (!existsSync(path)) {
+    console.warn(`⚠️  src/${label} não existe.`);
+    return {};
+  }
+  return JSON.parse(readFileSync(path, 'utf8')) as Record<string, PerfectPayOfferInfo>;
+}
 
 export function loadOffers(): Record<string, PerfectPayOfferInfo> {
-  if (cache) return cache;
-  if (!existsSync(path)) {
-    console.warn('⚠️  src/perfectpay-offers.json não existe.');
-    cache = {};
-    return cache;
-  }
-  cache = JSON.parse(readFileSync(path, 'utf8')) as Record<string, PerfectPayOfferInfo>;
-  return cache;
+  if (!brlCache) brlCache = loadFile(brlPath, 'perfectpay-offers.json');
+  if (!usdCache) usdCache = loadFile(usdPath, 'perfectpay-offers-usd.json');
+  return { ...brlCache, ...usdCache };
 }
 
 export function getOffer(pkgId: string): PerfectPayOfferInfo | undefined {

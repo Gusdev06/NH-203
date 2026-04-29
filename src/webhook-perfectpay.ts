@@ -1,7 +1,7 @@
 import type { Bot } from 'grammy';
 import { processOrder, type ProcessOrderResult } from './db.ts';
 import { planCodeToPkgId } from './perfectpay-offers.ts';
-import { PACKAGES, CREDITS_PER_IMAGE } from './packages.ts';
+import { findPackage, CREDITS_PER_IMAGE } from './packages.ts';
 
 type PerfectPayPayload = {
   token?: string;
@@ -112,7 +112,7 @@ export async function handlePerfectPayWebhook(
     return { httpStatus: 200, body: 'unmatched' };
   }
 
-  const pkg = PACKAGES.find((p) => p.id === pkgId);
+  const pkg = findPackage(pkgId);
   if (!pkg) {
     console.warn(`[perfectpay] pkg ${pkgId} desconhecido`);
     return { httpStatus: 200, body: 'unknown pkg' };
@@ -123,7 +123,7 @@ export async function handlePerfectPayWebhook(
     telegramId,
     pkgId,
     credits: pkg.credits,
-    amount: payload.sale_amount ?? pkg.priceBrl,
+    amount: payload.sale_amount ?? pkg.price,
     rawPayload: rawBody,
   });
 
@@ -133,11 +133,12 @@ export async function handlePerfectPayWebhook(
   }
 
   const images = pkg.credits / CREDITS_PER_IMAGE;
+  const isBrl = pkg.currency === 'BRL';
+  const message = isBrl
+    ? `✅ Pagamento confirmado!\n\n${pkg.credits} créditos (${images} imagens) foram adicionados à sua conta.\n\nUse /gerar pra criar sua primeira imagem.`
+    : `✅ Payment confirmed!\n\n${pkg.credits} credits (${images} images) were added to your account.\n\nUse /gerar to create your first image.`;
   try {
-    await bot.api.sendMessage(
-      telegramId,
-      `✅ Pagamento confirmado!\n\n${pkg.credits} créditos (${images} imagens) foram adicionados à sua conta.\n\nUse /gerar pra criar sua primeira imagem.`
-    );
+    await bot.api.sendMessage(telegramId, message);
   } catch (err) {
     console.warn('[perfectpay] falha ao notificar usuário no Telegram:', err);
   }
