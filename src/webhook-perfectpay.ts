@@ -12,12 +12,15 @@ type PerfectPayPayload = {
   product?: { code?: string; name?: string };
   plan?: { code?: string; name?: string };
   customer?: { email?: string; full_name?: string };
-  src?: string | null;
-  utm_source?: string | null;
-  utm_medium?: string | null;
-  utm_campaign?: string | null;
-  utm_content?: string | null;
-  utm_term?: string | null;
+  metadata?: {
+    src?: string | null;
+    sck?: string | null;
+    utm_source?: string | null;
+    utm_medium?: string | null;
+    utm_campaign?: string | null;
+    utm_content?: string | null;
+    utm_term?: string | null;
+  };
 };
 
 const APPROVED_STATUS = 2;
@@ -32,10 +35,12 @@ function extractTracking(payload: PerfectPayPayload): {
   telegramId: number | null;
   pkgId: string | null;
 } {
+  const meta = payload.metadata ?? {};
   const candidates: Array<string | null | undefined> = [
-    payload.src,
-    payload.utm_content,
-    payload.utm_term,
+    meta.src,
+    meta.utm_content,
+    meta.sck,
+    meta.utm_term,
   ];
 
   for (const candidate of candidates) {
