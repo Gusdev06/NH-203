@@ -1,0 +1,50 @@
+{
+  "p10": {
+    "planCode": "PPLQQP970",
+    "checkoutCode": "PPU38CQB7RS",
+    "url": "https://go.perfectpay.com.br/PPU38CQB7RS",
+    "price": 10
+  },
+  "p25": {
+    "planCode": "PPLQQP96N",
+    "checkoutCode": "PPU38CQB7RF",
+    "url": "https://go.perfectpay.com.br/PPU38CQB7RF",
+    "price": 25
+  },
+  "p50": {
+    "planCode": "PPLQQP96P",
+    "checkoutCode": "PPU38CQB7RH",
+    "url": "https://go.perfectpay.com.br/PPU38CQB7RH",
+    "price": 50
+  },
+  "p75": {
+    "planCode": "PPLQQP96O",
+    "checkoutCode": "PPU38CQB7RE",
+    "url": "https://go.perfectpay.com.br/PPU38CQB7RE",
+    "price": 75
+  },
+  "p100": {
+    "planCode": "PPLQQP96R",
+    "checkoutCode": "PPU38CQB7RJ",
+    "url": "https://go.perfectpay.com.br/PPU38CQB7RJ",
+    "price": 100
+  },
+  "p150": {
+    "planCode": "PPLQQP96S",
+    "checkoutCode": "PPU38CQB7RK",
+    "url": "https://go.perfectpay.com.br/PPU38CQB7RK",
+    "price": 150
+  },
+  "p200": {
+    "planCode": "PPLQQP96T",
+    "checkoutCode": "PPU38CQB7RL",
+    "url": "https://go.perfectpay.com.br/PPU38CQB7RL",
+    "price": 200
+  },
+  "p300": {
+    "planCode": "PPLQQP96U",
+    "checkoutCode": "PPU38CQB7RP",
+    "url": "https://go.perfectpay.com.br/PPU38CQB7RP",
+    "price": 300
+  }
+}

@@ -8,6 +8,7 @@ export type CreditPackage = {
 export const CREDITS_PER_IMAGE = 5;
 
 export const PACKAGES: CreditPackage[] = [
+  { id: 'p10', credits: 30, priceBrl: 10 },
   { id: 'p25', credits: 75, priceBrl: 25 },
   { id: 'p50', credits: 150, priceBrl: 50 },
   { id: 'p75', credits: 250, priceBrl: 75, bonusImages: 5 },

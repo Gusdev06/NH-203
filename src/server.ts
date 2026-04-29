@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { Bot } from 'grammy';
 import { handleCaktoWebhook } from './webhook.ts';
+import { handlePerfectPayWebhook } from './webhook-perfectpay.ts';
 import {
   getAdminStats,
   getUserDetail,
@@ -213,17 +214,21 @@ async function handleAdmin(
 export function startServer(bot: Bot): void {
   const port = Number(process.env.WEBHOOK_PORT ?? 3000);
   const webhookSecret = process.env.CAKTO_WEBHOOK_SECRET;
+  const perfectPaySecret = process.env.PERFECTPAY_WEBHOOK_SECRET;
   const adminToken = process.env.ADMIN_TOKEN;
   const telegramSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 
-  if (!webhookSecret && !adminToken && !telegramSecret) {
+  if (!webhookSecret && !perfectPaySecret && !adminToken && !telegramSecret) {
     console.warn(
-      '⚠️  Nenhum secret configurado (CAKTO/ADMIN/TELEGRAM) — servidor HTTP não iniciado.'
+      '⚠️  Nenhum secret configurado (CAKTO/PERFECTPAY/ADMIN/TELEGRAM) — servidor HTTP não iniciado.'
     );
     return;
   }
 
   const webhookPath = webhookSecret ? `/webhook/cakto/${webhookSecret}` : null;
+  const perfectPayPath = perfectPaySecret
+    ? `/webhook/perfectpay/${perfectPaySecret}`
+    : null;
   const adminPrefix = adminToken ? `/admin/${adminToken}` : null;
   const telegramPath = telegramSecret ? `/telegram/${telegramSecret}` : null;
 
@@ -257,7 +262,20 @@ export function startServer(bot: Bot): void {
         res.writeHead(result.httpStatus, { 'Content-Type': 'text/plain' });
         res.end(result.body);
       } catch (err) {
-        console.error('[server] erro no webhook:', err);
+        console.error('[server] erro no webhook cakto:', err);
+        res.writeHead(500).end('error');
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && perfectPayPath && pathname === perfectPayPath) {
+      try {
+        const body = await readBody(req);
+        const result = await handlePerfectPayWebhook(bot, body);
+        res.writeHead(result.httpStatus, { 'Content-Type': 'text/plain' });
+        res.end(result.body);
+      } catch (err) {
+        console.error('[server] erro no webhook perfectpay:', err);
         res.writeHead(500).end('error');
       }
       return;
@@ -291,6 +309,11 @@ export function startServer(bot: Bot): void {
       console.log(`🌐 Webhook Cakto ouvindo em http://localhost:${port}${webhookPath}`);
     } else {
       console.warn('⚠️  CAKTO_WEBHOOK_SECRET não configurado — webhook Cakto desativado.');
+    }
+    if (perfectPayPath) {
+      console.log(`🌐 Webhook Perfect Pay ouvindo em http://localhost:${port}${perfectPayPath}`);
+    } else {
+      console.warn('⚠️  PERFECTPAY_WEBHOOK_SECRET não configurado — webhook Perfect Pay desativado.');
     }
     if (telegramPath) {
       console.log(`📨 Webhook Telegram ouvindo em http://localhost:${port}${telegramPath}`);

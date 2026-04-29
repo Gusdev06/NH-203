@@ -17,7 +17,7 @@ import {
   formatBrl,
   CREDITS_PER_IMAGE as PKG_CREDITS_PER_IMAGE,
 } from './packages.ts';
-import { getOffer } from './cakto-offers.ts';
+import { getOffer } from './perfectpay-offers.ts';
 import { startServer } from './server.ts';
 
 const CREDITS_PER_IMAGE = 5;
@@ -385,7 +385,7 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
   const tag = `tg_${userId}_${pkgId}`;
   const checkoutUrl =
     `${offer.url}?utm_source=telegram&utm_campaign=hot_bot` +
-    `&utm_content=${tag}&sck=${tag}&src=${tag}`;
+    `&utm_content=${tag}&src=${tag}`;
 
   const kb = new InlineKeyboard()
     .url(`💳 Pagar ${formatBrl(pkg.priceBrl)}`, checkoutUrl)
