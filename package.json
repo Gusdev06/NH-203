@@ -7,7 +7,8 @@
     "dev": "tsx watch src/bot.ts",
     "start": "tsx src/bot.ts",
     "cakto:setup": "tsx scripts/cakto-setup.ts",
-    "cakto:webhook": "tsx scripts/cakto-register-webhook.ts"
+    "cakto:webhook": "tsx scripts/cakto-register-webhook.ts",
+    "backfill:credits": "tsx scripts/backfill-missing-credits.ts"
   },
   "dependencies": {
     "@grammyjs/runner": "^2.0.3",

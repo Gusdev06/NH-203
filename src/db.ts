@@ -160,6 +160,9 @@ export function processOrder(params: {
     );
     if (params.telegramId && params.credits > 0) {
       db.prepare(
+        'INSERT OR IGNORE INTO users (telegram_id, credits, created_at) VALUES (?, 0, ?)'
+      ).run(params.telegramId, Date.now());
+      db.prepare(
         'UPDATE users SET credits = credits + ? WHERE telegram_id = ?'
       ).run(params.credits, params.telegramId);
     }
