@@ -729,25 +729,67 @@ const commandsPt = [
   { command: 'ajuda', description: 'Como funciona' },
   { command: 'cancelar', description: 'Cancelar fluxo ativo' },
 ];
-Promise.all([
-  bot.api.setMyCommands(commandsEn),
-  bot.api.setMyCommands(commandsPt, { language_code: 'pt' }),
-]).catch((err) => console.warn('Falha ao setar comandos:', err));
+async function setCommandsWithRetry(attempts = 5) {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await Promise.all([
+        bot.api.setMyCommands(commandsEn),
+        bot.api.setMyCommands(commandsPt, { language_code: 'pt' }),
+      ]);
+      return;
+    } catch (err) {
+      const last = i === attempts;
+      console.warn(`Falha ao setar comandos (tentativa ${i}/${attempts}):`, err);
+      if (last) return;
+      await new Promise((r) => setTimeout(r, 2000 * i));
+    }
+  }
+}
 
 const telegramSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 const webhookBaseUrl = process.env.WEBHOOK_BASE_URL?.replace(/\/$/, '');
 
+async function initWithRetry(attempts = 10): Promise<void> {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await bot.init();
+      return;
+    } catch (err) {
+      const last = i === attempts;
+      console.warn(`bot.init() falhou (tentativa ${i}/${attempts}):`, err);
+      if (last) throw err;
+      await new Promise((r) => setTimeout(r, Math.min(2000 * i, 15000)));
+    }
+  }
+}
+
+async function setWebhookWithRetry(url: string, attempts = 10): Promise<void> {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await bot.api.setWebhook(url, {
+        secret_token: telegramSecret!,
+        drop_pending_updates: false,
+        allowed_updates: ['message', 'callback_query'],
+      });
+      return;
+    } catch (err) {
+      const last = i === attempts;
+      console.warn(`setWebhook falhou (tentativa ${i}/${attempts}):`, err);
+      if (last) throw err;
+      await new Promise((r) => setTimeout(r, Math.min(2000 * i, 15000)));
+    }
+  }
+}
+
 async function start() {
-  await bot.init();
+  await initWithRetry();
   const username = bot.botInfo.username;
+
+  setCommandsWithRetry();
 
   if (telegramSecret && webhookBaseUrl) {
     const url = `${webhookBaseUrl}/telegram/${telegramSecret}`;
-    await bot.api.setWebhook(url, {
-      secret_token: telegramSecret,
-      drop_pending_updates: false,
-      allowed_updates: ['message', 'callback_query'],
-    });
+    await setWebhookWithRetry(url);
     console.log(`🔥 Bot @${username} rodando (webhook → ${url})`);
   } else {
     await bot.api.deleteWebhook({ drop_pending_updates: false }).catch(() => { });
