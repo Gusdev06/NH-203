@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import { Bot, InlineKeyboard, type Context } from 'grammy';
+import { existsSync } from 'node:fs';
+import { Bot, InlineKeyboard, InputFile, type Context } from 'grammy';
 import { run, sequentialize } from '@grammyjs/runner';
 import {
   ensureUser,
@@ -9,7 +10,6 @@ import {
   logGeneration,
   isBanned,
   updateUserProfile,
-  processOrder,
 } from './db.ts';
 import { generateImage } from './replicate.ts';
 import {
@@ -27,15 +27,11 @@ const CREDITS_PER_IMAGE = 5;
 
 type Lang = 'pt' | 'en';
 
-const userCurrency = new Map<number, Currency>();
-
 function langFromCurrency(c: Currency): Lang {
   return c === 'BRL' ? 'pt' : 'en';
 }
 
 function getCurrency(ctx: Context): Currency {
-  const id = ctx.from?.id;
-  if (id && userCurrency.has(id)) return userCurrency.get(id)!;
   return currencyForLanguage(ctx.from?.language_code);
 }
 
@@ -44,15 +40,28 @@ function getLang(ctx: Context): Lang {
 }
 
 const STR = {
-  welcomeNew: {
-    pt: '🔥 <b>Bem-vindo ao HOT!</b>\n\nGere imagens incríveis com IA. Compre créditos pra começar.',
-    en: "🔥 <b>Welcome to HOT!</b>\n\nGenerate amazing AI images. Buy credits to get started.",
+  welcome: {
+    pt: '📸 Manda a foto da garota que você quer ver sem roupa. 😈😈',
+    en: '📸 Send the photo of the girl you want to see naked. 😈😈',
   },
-  mainMenu: (credits: number, lang: Lang) =>
-    lang === 'pt'
-      ? `🔥 <b>HOT</b> — gerador de imagens IA\n\n💎 Seus créditos: <b>${credits}</b>\n🎨 Cada geração custa <b>${CREDITS_PER_IMAGE} créditos</b>\n\nEscolha uma opção abaixo:`
-      : `🔥 <b>HOT</b> — AI image generator\n\n💎 Your credits: <b>${credits}</b>\n🎨 Each generation costs <b>${CREDITS_PER_IMAGE} credits</b>\n\nChoose an option below:`,
-  generate: { pt: '🎨 Gerar imagem', en: '🎨 Generate image' },
+  menuTitle: {
+    pt: '🔥 <b>HOT</b>\n\nEscolha uma opção:',
+    en: '🔥 <b>HOT</b>\n\nChoose an option:',
+  },
+  undress: { pt: '🔥 Undress', en: '🔥 Undress' },
+  faceswap: { pt: '🔄 Face Swap', en: '🔄 Face Swap' },
+  undressTitle: {
+    pt: '🔥 <b>Undress</b>\n\nEnvie <b>1 foto</b> da pessoa.\n\n⚡ Custa <b>5 créditos</b>.',
+    en: '🔥 <b>Undress</b>\n\nSend <b>1 photo</b> of the person.\n\n⚡ Costs <b>5 credits</b>.',
+  },
+  faceswapTitle: {
+    pt: '🔄 <b>Face Swap</b>\n\nEnvie <b>2 fotos</b>:\n• 1ª foto: rosto (de onde vem a face)\n• 2ª foto: corpo/cena (onde a face vai)\n\n💡 Pode mandar as duas juntas ou uma de cada vez.\n\n⚡ Custa <b>5 créditos</b>.',
+    en: '🔄 <b>Face Swap</b>\n\nSend <b>2 photos</b>:\n• 1st photo: face source\n• 2nd photo: target body/scene\n\n💡 You can send both at once or one at a time.\n\n⚡ Costs <b>5 credits</b>.',
+  },
+  faceswapWaiting: {
+    pt: '📸 Foto 1/2 recebida. Agora envie a <b>2ª foto</b>.',
+    en: '📸 Photo 1/2 received. Now send the <b>2nd photo</b>.',
+  },
   buy: { pt: '💳 Comprar créditos', en: '💳 Buy credits' },
   balance: { pt: '💎 Meu saldo', en: '💎 My balance' },
   help: { pt: '❓ Ajuda', en: '❓ Help' },
@@ -60,7 +69,6 @@ const STR = {
   home: { pt: '🏠 Menu', en: '🏠 Menu' },
   cancel: { pt: '❌ Cancelar', en: '❌ Cancel' },
   packagesTitle: { pt: '💳 <b>Pacotes de créditos</b>', en: '💳 <b>Credit packages</b>' },
-  switchCurrency: { pt: '💱 Pagar em US$', en: '💱 Pay in R$' },
   insufficientTitle: { pt: '⚠️ <b>Créditos insuficientes</b>', en: '⚠️ <b>Insufficient credits</b>' },
   insufficient: (have: number, need: number, lang: Lang) =>
     lang === 'pt'
@@ -68,20 +76,50 @@ const STR = {
       : `You have <b>${have}</b>, need <b>${need}</b>.`,
   balanceTitle: { pt: '💎 <b>Seu saldo</b>', en: '💎 <b>Your balance</b>' },
   credits: { pt: 'Créditos', en: 'Credits' },
-  generateNow: { pt: '🎨 Gerar agora', en: '🎨 Generate now' },
   buyMore: { pt: '💳 Comprar mais', en: '💳 Buy more' },
-  newGen: { pt: '🎨 <b>Nova geração</b>', en: '🎨 <b>New generation</b>' },
-  sendOne: {
-    pt: 'Agora envie <b>uma única mensagem</b>:\n• <b>Imagem + legenda</b> (a legenda é o prompt), ou\n• <b>Apenas texto</b> (sem imagem de referência)\n\n💡 Pra enviar imagem com prompt: anexe a foto e digite a descrição no campo de legenda antes de mandar.',
-    en: 'Now send <b>a single message</b>:\n• <b>Image + caption</b> (the caption is the prompt), or\n• <b>Text only</b> (no reference image)\n\n💡 To send image with prompt: attach the photo and type the description in the caption field before sending.',
+  generating: {
+    pt: '✨ Gerando sua imagem... (30–60s)',
+    en: '✨ Generating your image... (30–60s)',
   },
-  paid: (credits: number, images: number, lang: Lang) =>
+  generationError: {
+    pt: '❌ Erro ao gerar. Seus créditos foram devolvidos.\n\nTente novamente.',
+    en: '❌ Generation error. Your credits were refunded.\n\nTry again.',
+  },
+  resultCaption: (remaining: number, lang: Lang) =>
     lang === 'pt'
-      ? `✅ Pagamento confirmado!\n\n${credits} créditos (${images} imagens) foram adicionados à sua conta.\n\nUse /gerar pra criar sua primeira imagem.`
-      : `✅ Payment confirmed!\n\n${credits} credits (${images} images) were added to your account.\n\nUse /gerar to create your first image.`,
+      ? `✨ <b>Pronto!</b> Toque na imagem pra revelar.\n\n💎 Restam <b>${remaining}</b> créditos`
+      : `✨ <b>Done!</b> Tap the image to reveal.\n\n💎 <b>${remaining}</b> credits left`,
+  editPhoto: { pt: '✏️ Editar foto', en: '✏️ Edit photo' },
+  redo: { pt: '🔄 Refazer geração', en: '🔄 Regenerate' },
+  redoUnavailable: {
+    pt: 'Esta geração não está mais disponível para refazer.',
+    en: 'This generation is no longer available to redo.',
+  },
+  editTitle: {
+    pt: '✏️ <b>Editar foto</b>\n\nManda em texto o que você quer mudar nessa imagem.\n\nEx: "troca o fundo por uma praia", "adiciona óculos escuros", "muda a cor do cabelo pra ruivo".\n\n⚡ Custa <b>5 créditos</b>.',
+    en: '✏️ <b>Edit photo</b>\n\nSend a text describing what to change in this image.\n\nEx: "change the background to a beach", "add sunglasses", "change hair color to red".\n\n⚡ Costs <b>5 credits</b>.',
+  },
+  editUnavailable: {
+    pt: 'Imagem não está mais disponível para edição. Gere uma nova.',
+    en: 'Image no longer available for editing. Generate a new one.',
+  },
+  cancelled: { pt: '❌ Fluxo cancelado.', en: '❌ Flow cancelled.' },
+  cancelledToast: { pt: 'Cancelado', en: 'Cancelled' },
+  blocked: { pt: '⛔ Conta bloqueada.', en: '⛔ Account blocked.' },
+  downloadFail: {
+    pt: '❌ Não consegui baixar sua imagem. Tenta de novo.',
+    en: '❌ Could not download your image. Try again.',
+  },
+  helpText: (lang: Lang) =>
+    lang === 'pt'
+      ? `❓ <b>Como funciona</b>\n\n1️⃣ Compre créditos\n2️⃣ Manda a foto que quer melhorar (4K automático)\n3️⃣ Ou escolha: 🔥 Undress / 🔄 Face Swap\n\n⚡ Cada geração usa <b>${CREDITS_PER_IMAGE} créditos</b>\n\n<b>Comandos</b>\n/start — menu principal\n/undress — fluxo undress\n/faceswap — fluxo face swap\n/saldo — ver créditos\n/comprar — comprar pacote\n/cancelar — abortar fluxo atual`
+      : `❓ <b>How it works</b>\n\n1️⃣ Buy credits\n2️⃣ Send the photo you want to enhance (auto 4K)\n3️⃣ Or pick: 🔥 Undress / 🔄 Face Swap\n\n⚡ Each generation uses <b>${CREDITS_PER_IMAGE} credits</b>\n\n<b>Commands</b>\n/start — main menu\n/undress — undress flow\n/faceswap — face swap flow\n/balance — see credits\n/buy — buy a package\n/cancel — abort current flow`,
 };
 
-function s<K extends keyof typeof STR>(key: K, lang: Lang): typeof STR[K] extends Record<Lang, string> ? string : never {
+function s<K extends keyof typeof STR>(
+  key: K,
+  lang: Lang
+): typeof STR[K] extends Record<Lang, string> ? string : never {
   const entry = STR[key] as { pt: string; en: string };
   return entry[lang] as never;
 }
@@ -120,11 +158,8 @@ bot.use(async (ctx, next) => {
   const id = ctx.from?.id;
   if (id && isBanned(id)) {
     if (ctx.callbackQuery) {
-      await ctx.answerCallbackQuery('⛔ Conta bloqueada.').catch(() => { });
-    } else if (ctx.message) {
-      await ctx
-        .reply('⛔ Sua conta está bloqueada. Entre em contato com o suporte.')
-        .catch(() => { });
+      const lang = getLang(ctx);
+      await ctx.answerCallbackQuery(s('blocked', lang)).catch(() => { });
     }
     return;
   }
@@ -132,37 +167,65 @@ bot.use(async (ctx, next) => {
 });
 
 type PendingState =
-  | { step: 'await_input' }
+  | { step: 'await_undress_photo' }
+  | { step: 'await_faceswap_photos'; collected: string[]; pendingTimer?: ReturnType<typeof setTimeout> }
   | { step: 'await_edit_prompt'; imageUrl: string };
 
 const pending = new Map<number, PendingState>();
 const generating = new Set<number>();
-const lastGenerated = new Map<number, string>();
 
-const HD_URL_CAP = 2000;
-const hdUrls = new Map<string, string>();
+const MAX_REFERENCE_IMAGES = 2;
+const MEDIA_GROUP_WAIT_MS = 1500;
 
-function saveHdUrl(url: string): string {
-  const token =
-    Math.random().toString(36).slice(2, 10) +
-    Date.now().toString(36).slice(-4);
-  hdUrls.set(token, url);
-  if (hdUrls.size > HD_URL_CAP) {
-    const firstKey = hdUrls.keys().next().value;
-    if (firstKey) hdUrls.delete(firstKey);
+const ENHANCE_PROMPT =
+  'Deixa essa mulher completamente pelada, mantenha o rosto original e o corpo, os seios e a bunda devem ficar bem avantajados e sedutores, mantenha a iluminação e o fundo original.';
+
+const UNDRESS_PROMPT =
+  'Remove all clothing from the person in the image. Show them fully nude. Keep the original face, body, pose, lighting and background. Photorealistic, natural skin tone and anatomy.';
+
+const FACESWAP_PROMPT =
+  'Photorealistic face and hair swap. The ONLY thing that changes in the second image is the face and the hair — everything else must remain pixel-perfect identical to the original second image. Take the exact facial identity from the first image — eyes, nose, mouth, eyebrows, face shape, jawline and overall likeness — together with the hair (same hairstyle, length, color, texture and hairline) and naturally apply both to the person in the second image. Adapt the head proportions so the new face and hair fit the body naturally. STRICTLY PRESERVE every other detail of the second image exactly as it is: the body, skin tone of the body, pose, clothing (every fold, texture, color and accessory), background (every object, person, furniture, wall, floor, decoration), environment, scene, framing, camera angle, focal length, depth of field, bokeh, composition, image grain, image noise, color grading, lighting setup, shadows, highlights, reflections and overall mood. Do not add, remove, move or alter any object, person or element. Do not change the resolution, aspect ratio, crop, perspective or post-processing of the second image. Match the new face and hair perfectly to the second image\'s lighting direction, color temperature, shadows, highlights and ambient tone so it blends as if it was always there. Seamless blending at the jawline, neck and hairline with no visible seams, color shifts or edges. Natural skin and hair texture with realistic pores, individual hair strands and subtle imperfections matching the exact detail level of the rest of the photo. No plastic or airbrushed look, no AI artifacts, no symmetry errors, no scene reinterpretation. The expression should fit the body pose naturally. Hyperrealistic, indistinguishable from the original second image except for the new face and hair.';
+
+function clearPending(id: number) {
+  const state = pending.get(id);
+  if (state?.step === 'await_faceswap_photos' && state.pendingTimer) {
+    clearTimeout(state.pendingTimer);
   }
-  return token;
+  return pending.delete(id);
 }
 
-function resultKeyboard(token: string): InlineKeyboard {
+const notifiedGroups = new Set<string>();
+function markGroupNotified(groupId: string) {
+  notifiedGroups.add(groupId);
+  setTimeout(() => notifiedGroups.delete(groupId), 5000);
+}
+
+const GEN_CAP = 2000;
+type GenerationContext = {
+  outputUrl: string;
+  prompt: string;
+  inputUrls?: string[];
+};
+const generations = new Map<string, GenerationContext>();
+
+function saveGeneration(ctx: GenerationContext): string {
+  const t =
+    Math.random().toString(36).slice(2, 10) +
+    Date.now().toString(36).slice(-4);
+  generations.set(t, ctx);
+  if (generations.size > GEN_CAP) {
+    const firstKey = generations.keys().next().value;
+    if (firstKey) generations.delete(firstKey);
+  }
+  return t;
+}
+
+function resultKeyboard(genToken: string, lang: Lang): InlineKeyboard {
   return new InlineKeyboard()
-    .text('⬇️ Baixar HD', `gen:hd:${token}`)
+    .text(s('redo', lang), `gen:redo:${genToken}`)
+    .text(s('editPhoto', lang), `gen:edit:${genToken}`)
     .row()
-    .text('✏️ Editar esta', 'gen:edit')
-    .text('🙈 Esconder', `gen:hide:${token}`)
-    .row()
-    .text('🎨 Gerar outra', 'menu:gerar')
-    .text('🏠 Menu', 'menu:home');
+    .text(s('home', lang), 'menu:home');
 }
 
 async function getTelegramFileUrl(ctx: Context, fileId: string): Promise<string | null> {
@@ -173,13 +236,14 @@ async function getTelegramFileUrl(ctx: Context, fileId: string): Promise<string 
 
 // ───────────────────── helpers ─────────────────────
 
-function mainMenu(credits: number, lang: Lang): { text: string; keyboard: InlineKeyboard } {
-  const text = STR.mainMenu(credits, lang);
+function mainMenu(lang: Lang): { text: string; keyboard: InlineKeyboard } {
+  const text = s('menuTitle', lang);
   const keyboard = new InlineKeyboard()
-    .text(s('generate', lang), 'menu:gerar')
+    .text(s('undress', lang), 'menu:undress')
+    .text(s('faceswap', lang), 'menu:faceswap')
     .row()
-    .text(s('buy', lang), 'menu:comprar')
     .text(s('balance', lang), 'menu:saldo')
+    .text(s('buy', lang), 'menu:comprar')
     .row()
     .text(s('help', lang), 'menu:ajuda');
   return { text, keyboard };
@@ -189,18 +253,11 @@ function packagesMessage(currency: Currency, lang: Lang): { text: string; keyboa
   const keyboard = new InlineKeyboard();
   const creditsLabel = lang === 'pt' ? 'créditos' : 'credits';
   for (const pkg of packagesFor(currency)) {
-    const bonusCredits = pkg.bonusImages
-      ? pkg.bonusImages * PKG_CREDITS_PER_IMAGE
-      : 0;
+    const bonusCredits = pkg.bonusImages ? pkg.bonusImages * PKG_CREDITS_PER_IMAGE : 0;
     const bonusLabel = bonusCredits ? ` 🎁 +${bonusCredits}` : '';
     const label = `${formatPrice(pkg.price, pkg.currency)} • ${pkg.credits} ${creditsLabel}${bonusLabel}`;
     keyboard.text(label, `buy:${pkg.id}`).row();
   }
-  const switchLabel =
-    currency === 'BRL'
-      ? (lang === 'pt' ? '💱 Pagar com ⭐ Stars' : '💱 Pay with ⭐ Stars')
-      : (lang === 'pt' ? '💱 Pagar em R$' : '💱 Pay in R$');
-  keyboard.text(switchLabel, 'currency:switch').row();
   keyboard.text(s('back', lang), 'menu:home');
   return { text: s('packagesTitle', lang), keyboard };
 }
@@ -228,7 +285,7 @@ async function editOrReply(
 async function showHome(ctx: Context, id: number) {
   ensureUser(id);
   const lang = getLang(ctx);
-  const { text, keyboard } = mainMenu(getCredits(id), lang);
+  const { text, keyboard } = mainMenu(lang);
   await editOrReply(ctx, text, keyboard);
 }
 
@@ -245,7 +302,6 @@ async function showSaldo(ctx: Context, id: number) {
   const credits = getCredits(id);
   const text = `${s('balanceTitle', lang)}\n\n${s('credits', lang)}: <b>${credits}</b>`;
   const kb = new InlineKeyboard()
-    .text(s('generateNow', lang), 'menu:gerar')
     .text(s('buyMore', lang), 'menu:comprar')
     .row()
     .text(s('back', lang), 'menu:home');
@@ -254,70 +310,119 @@ async function showSaldo(ctx: Context, id: number) {
 
 async function showAjuda(ctx: Context) {
   const lang = getLang(ctx);
-  const text = lang === 'pt'
-    ? `❓ <b>Como funciona</b>\n\n1️⃣ Compre créditos\n2️⃣ Toque em <b>Gerar imagem</b>\n3️⃣ Envie uma imagem de referência (opcional)\n4️⃣ Descreva o que quer na imagem\n5️⃣ Receba em segundos!\n\n⚡ Cada geração usa <b>${CREDITS_PER_IMAGE} créditos</b>\n<b>Comandos</b>\n/gerar — abrir fluxo de geração\n/saldo — ver créditos\n/comprar — comprar pacote\n/cancelar — abortar fluxo atual\n/start — voltar ao menu`
-    : `❓ <b>How it works</b>\n\n1️⃣ Buy credits\n2️⃣ Tap <b>Generate image</b>\n3️⃣ Send a reference image (optional)\n4️⃣ Describe what you want\n5️⃣ Get it in seconds!\n\n⚡ Each generation uses <b>${CREDITS_PER_IMAGE} credits</b>\n<b>Commands</b>\n/gerar — open generation flow\n/saldo — see credits\n/comprar — buy a package\n/cancelar — abort current flow\n/start — back to menu`;
   const kb = new InlineKeyboard().text(s('back', lang), 'menu:home');
-  await editOrReply(ctx, text, kb);
+  await editOrReply(ctx, STR.helpText(lang), kb);
 }
 
-async function startGenerate(ctx: Context, id: number) {
+async function notifyInsufficient(ctx: Context, id: number) {
+  const lang = getLang(ctx);
+  const kb = new InlineKeyboard()
+    .text(s('buy', lang), 'menu:comprar')
+    .row()
+    .text(s('home', lang), 'menu:home');
+  await ctx.reply(
+    `${s('insufficientTitle', lang)}\n\n${STR.insufficient(getCredits(id), CREDITS_PER_IMAGE, lang)}`,
+    { parse_mode: 'HTML', reply_markup: kb }
+  );
+}
+
+async function startUndress(ctx: Context, id: number) {
   ensureUser(id);
   const lang = getLang(ctx);
   if (getCredits(id) < CREDITS_PER_IMAGE) {
-    const kb = new InlineKeyboard()
-      .text(s('buy', lang), 'menu:comprar')
-      .row()
-      .text(s('back', lang), 'menu:home');
-    await editOrReply(
-      ctx,
-      `${s('insufficientTitle', lang)}\n\n${STR.insufficient(getCredits(id), CREDITS_PER_IMAGE, lang)}`,
-      kb
-    );
+    await notifyInsufficient(ctx, id);
     return;
   }
-  pending.set(id, { step: 'await_input' });
+  clearPending(id);
+  pending.set(id, { step: 'await_undress_photo' });
   const kb = new InlineKeyboard().text(s('cancel', lang), 'gen:cancel');
-  await editOrReply(ctx, `${s('newGen', lang)}\n\n${s('sendOne', lang)}`, kb);
+  await editOrReply(ctx, s('undressTitle', lang), kb);
+}
+
+async function startFaceswap(ctx: Context, id: number) {
+  ensureUser(id);
+  const lang = getLang(ctx);
+  if (getCredits(id) < CREDITS_PER_IMAGE) {
+    await notifyInsufficient(ctx, id);
+    return;
+  }
+  clearPending(id);
+  pending.set(id, { step: 'await_faceswap_photos', collected: [] });
+  const kb = new InlineKeyboard().text(s('cancel', lang), 'gen:cancel');
+  await editOrReply(ctx, s('faceswapTitle', lang), kb);
 }
 
 // ───────────────────── commands ─────────────────────
 
+const welcomeVideoSource = process.env.WELCOME_VIDEO?.trim();
+let cachedWelcomeVideoFileId: string | undefined;
+
+async function sendWelcomeVideo(ctx: Context) {
+  if (!welcomeVideoSource) return;
+  try {
+    let media: string | InputFile;
+    if (cachedWelcomeVideoFileId) {
+      media = cachedWelcomeVideoFileId;
+    } else if (/^https?:\/\//i.test(welcomeVideoSource)) {
+      media = welcomeVideoSource;
+    } else if (existsSync(welcomeVideoSource)) {
+      media = new InputFile(welcomeVideoSource);
+    } else {
+      media = welcomeVideoSource;
+    }
+    const msg = await ctx.replyWithVideo(media, { has_spoiler: true });
+    if (!cachedWelcomeVideoFileId && msg.video?.file_id) {
+      cachedWelcomeVideoFileId = msg.video.file_id;
+    }
+  } catch (err) {
+    console.warn('[welcome-video] falha ao enviar:', err);
+  }
+}
+
 bot.command('start', async (ctx) => {
   const id = ctx.from!.id;
-  const { isNew } = ensureUser(id);
+  ensureUser(id);
+  clearPending(id);
   const lang = getLang(ctx);
-  if (isNew) {
-    await ctx.reply(s('welcomeNew', lang), { parse_mode: 'HTML' });
-  }
-  await showHome(ctx, id);
+  await sendWelcomeVideo(ctx);
+  await ctx.reply(s('welcome', lang), { parse_mode: 'HTML' });
 });
 
-bot.command(['menu', 'home'], (ctx) => showHome(ctx, ctx.from!.id));
-bot.command('saldo', (ctx) => showSaldo(ctx, ctx.from!.id));
-bot.command('comprar', (ctx) => showPackages(ctx));
-bot.command('ajuda', (ctx) => showAjuda(ctx));
-bot.command('gerar', (ctx) => startGenerate(ctx, ctx.from!.id));
+bot.command(['menu', 'home'], (ctx) => {
+  clearPending(ctx.from!.id);
+  return showHome(ctx, ctx.from!.id);
+});
+bot.command(['saldo', 'balance'], (ctx) => showSaldo(ctx, ctx.from!.id));
+bot.command(['comprar', 'buy'], (ctx) => showPackages(ctx));
+bot.command(['ajuda', 'help'], (ctx) => showAjuda(ctx));
+bot.command('undress', (ctx) => startUndress(ctx, ctx.from!.id));
+bot.command('faceswap', (ctx) => startFaceswap(ctx, ctx.from!.id));
 
-bot.command('cancelar', async (ctx) => {
+bot.command(['cancelar', 'cancel'], async (ctx) => {
   const id = ctx.from!.id;
-  if (pending.delete(id)) {
-    await ctx.reply('❌ Fluxo cancelado.');
-  } else {
-    await ctx.reply('Nada pra cancelar.');
+  const lang = getLang(ctx);
+  if (clearPending(id)) {
+    await ctx.reply(s('cancelled', lang));
   }
+  await showHome(ctx, id);
 });
 
 // ───────────────────── callbacks ─────────────────────
 
 bot.callbackQuery('menu:home', async (ctx) => {
+  clearPending(ctx.from!.id);
   await ctx.answerCallbackQuery();
   await showHome(ctx, ctx.from!.id);
 });
 
-bot.callbackQuery('menu:gerar', async (ctx) => {
+bot.callbackQuery('menu:undress', async (ctx) => {
   await ctx.answerCallbackQuery();
-  await startGenerate(ctx, ctx.from!.id);
+  await startUndress(ctx, ctx.from!.id);
+});
+
+bot.callbackQuery('menu:faceswap', async (ctx) => {
+  await ctx.answerCallbackQuery();
+  await startFaceswap(ctx, ctx.from!.id);
 });
 
 bot.callbackQuery('menu:comprar', async (ctx) => {
@@ -337,90 +442,52 @@ bot.callbackQuery('menu:ajuda', async (ctx) => {
 
 bot.callbackQuery('gen:cancel', async (ctx) => {
   const id = ctx.from!.id;
-  pending.delete(id);
-  await ctx.answerCallbackQuery('Cancelado');
+  const lang = getLang(ctx);
+  clearPending(id);
+  await ctx.answerCallbackQuery(s('cancelledToast', lang));
   await showHome(ctx, id);
 });
 
-bot.callbackQuery(/^gen:hide:(.+)$/, async (ctx) => {
-  const token = ctx.match[1];
-  const msg = ctx.callbackQuery.message;
-  const photos = msg && 'photo' in msg ? msg.photo : undefined;
-  if (!photos || photos.length === 0) {
-    await ctx.answerCallbackQuery('Nada pra esconder.');
-    return;
-  }
-  const fileId = photos[photos.length - 1].file_id;
-  await ctx.answerCallbackQuery();
-
-  await ctx.replyWithPhoto(fileId, {
-    caption: '🙈 <b>Escondida</b> — toque na imagem pra revelar.',
-    parse_mode: 'HTML',
-    has_spoiler: true,
-    reply_markup: resultKeyboard(token),
-  });
-  await ctx.deleteMessage().catch(() => { });
-});
-
-bot.callbackQuery(/^gen:hd:(.+)$/, async (ctx) => {
-  const token = ctx.match[1];
-  const url = hdUrls.get(token);
-  if (!url) {
-    await ctx.answerCallbackQuery(
-      'Versão HD não está mais disponível. Gere a imagem novamente.'
-    );
-    return;
-  }
-  await ctx.answerCallbackQuery('Enviando HD...');
-  try {
-    await ctx.replyWithDocument(url, {
-      caption: '🖼 <b>HD</b> — sem compressão',
-      parse_mode: 'HTML',
-    });
-  } catch (err) {
-    console.error('Erro ao enviar HD:', err);
-    await ctx.reply(
-      '❌ Não consegui enviar a versão HD. Tenta de novo em alguns segundos.'
-    );
-  }
-});
-
-bot.callbackQuery('gen:edit', async (ctx) => {
+bot.callbackQuery(/^gen:edit:(.+)$/, async (ctx) => {
   const id = ctx.from!.id;
   ensureUser(id);
-  const lastUrl = lastGenerated.get(id);
-  if (!lastUrl) {
-    await ctx.answerCallbackQuery('Nenhuma imagem pra editar.');
+  const t = ctx.match[1];
+  const gen = generations.get(t);
+  const lang = getLang(ctx);
+  if (!gen) {
+    await ctx.answerCallbackQuery(s('editUnavailable', lang));
     return;
   }
   if (getCredits(id) < CREDITS_PER_IMAGE) {
     await ctx.answerCallbackQuery();
-    const kb = new InlineKeyboard()
-      .text('💳 Comprar créditos', 'menu:comprar')
-      .row()
-      .text('🏠 Menu', 'menu:home');
-    await ctx.reply(
-      `⚠️ <b>Créditos insuficientes</b>\n\nVocê tem <b>${getCredits(id)}</b>, precisa de <b>${CREDITS_PER_IMAGE}</b>.`,
-      { parse_mode: 'HTML', reply_markup: kb }
-    );
+    await notifyInsufficient(ctx, id);
     return;
   }
-  pending.set(id, { step: 'await_edit_prompt', imageUrl: lastUrl });
+  clearPending(id);
+  pending.set(id, { step: 'await_edit_prompt', imageUrl: gen.outputUrl });
   await ctx.answerCallbackQuery();
-  const kb = new InlineKeyboard().text('❌ Cancelar', 'gen:cancel');
-  await ctx.reply(
-    `✏️ <b>Editar imagem</b>\n\nDescreva em texto o que você quer mudar na última imagem gerada. (Ex: "troque o fundo por uma praia", "adicione óculos escuros")`,
-    { parse_mode: 'HTML', reply_markup: kb }
-  );
+  const kb = new InlineKeyboard().text(s('cancel', lang), 'gen:cancel');
+  await ctx.reply(s('editTitle', lang), { parse_mode: 'HTML', reply_markup: kb });
 });
 
-bot.callbackQuery('currency:switch', async (ctx) => {
+bot.callbackQuery(/^gen:redo:(.+)$/, async (ctx) => {
   const id = ctx.from!.id;
-  const current = getCurrency(ctx);
-  const next: Currency = current === 'BRL' ? 'XTR' : 'BRL';
-  userCurrency.set(id, next);
-  await ctx.answerCallbackQuery(next === 'XTR' ? '💱 ⭐ Stars' : '💱 R$');
-  await showPackages(ctx);
+  ensureUser(id);
+  const t = ctx.match[1];
+  const gen = generations.get(t);
+  const lang = getLang(ctx);
+  if (!gen) {
+    await ctx.answerCallbackQuery(s('redoUnavailable', lang));
+    return;
+  }
+  if (getCredits(id) < CREDITS_PER_IMAGE) {
+    await ctx.answerCallbackQuery();
+    await notifyInsufficient(ctx, id);
+    return;
+  }
+  await ctx.answerCallbackQuery();
+  clearPending(id);
+  await handleGenerate(ctx, id, gen.prompt, gen.inputUrls);
 });
 
 bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
@@ -443,32 +510,7 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
       : ` 🎁 +${bonusCredits} bonus credits`
     : '';
 
-  // Telegram Stars flow — native invoice inside Telegram
-  if (pkg.currency === 'XTR') {
-    await ctx.answerCallbackQuery();
-    const title = lang === 'pt'
-      ? `${pkg.credits} créditos`
-      : `${pkg.credits} credits`;
-    const description = lang === 'pt'
-      ? `Pacote de ${pkg.credits} créditos para gerar imagens com IA${bonusLabel ? '. ' + bonusLabel.trim() : ''}.`
-      : `Pack of ${pkg.credits} credits to generate AI images${bonusLabel ? '. ' + bonusLabel.trim() : ''}.`;
-    try {
-      await ctx.api.sendInvoice(
-        ctx.chat!.id,
-        title,
-        description,
-        `${pkgId}:${userId}`,
-        'XTR',
-        [{ label: title, amount: pkg.price }]
-      );
-    } catch (err) {
-      console.error('[bot] Stars sendInvoice falhou:', err);
-      await ctx.reply(lang === 'pt' ? '⚠️ Erro ao gerar invoice.' : '⚠️ Error creating invoice.');
-    }
-    return;
-  }
-
-  // BRL flow — Perfect Pay external checkout
+  // Perfect Pay external checkout (BRL or USD)
   const offer = getOffer(pkgId);
   await ctx.answerCallbackQuery();
 
@@ -491,9 +533,13 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
     .row()
     .text(otherPkgsLabel, 'menu:comprar');
 
+  const payMethods = pkg.currency === 'BRL'
+    ? (lang === 'pt' ? '<b>PIX</b> ou <b>cartão</b>' : '<b>PIX</b> or <b>card</b>')
+    : (lang === 'pt' ? '<b>cartão</b>' : '<b>card</b>');
+
   const body = lang === 'pt'
-    ? `Toque no botão abaixo pra pagar via <b>PIX</b> ou <b>cartão</b>. Seus créditos são adicionados automaticamente assim que o pagamento for aprovado.`
-    : `Tap the button below to pay by <b>card</b>. Your credits are added automatically as soon as the payment is approved.`;
+    ? `Toque no botão abaixo pra pagar via ${payMethods}. Seus créditos são adicionados automaticamente assim que o pagamento for aprovado.`
+    : `Tap the button below to pay by ${payMethods}. Your credits are added automatically as soon as the payment is approved.`;
   await editOrReply(
     ctx,
     `📦 <b>${pkg.credits} ${creditsWord}</b> — <b>${priceLabel}</b>${bonusLabel}\n\n${body}`,
@@ -501,61 +547,9 @@ bot.callbackQuery(/^buy:(.+)$/, async (ctx) => {
   );
 });
 
-// ───────────────────── Telegram Stars handlers ─────────────────────
-
-bot.on('pre_checkout_query', async (ctx) => {
-  try {
-    await ctx.answerPreCheckoutQuery(true);
-  } catch (err) {
-    console.error('[bot] answerPreCheckoutQuery falhou:', err);
-  }
-});
-
-bot.on(':successful_payment', async (ctx) => {
-  const sp = ctx.message?.successful_payment;
-  if (!sp) return;
-
-  const [pkgId] = (sp.invoice_payload || '').split(':');
-  const pkg = findPackage(pkgId);
-  if (!pkg) {
-    console.warn(`[stars] pkg ${pkgId} desconhecido — payload=${sp.invoice_payload}`);
-    return;
-  }
-
-  const telegramId = ctx.from!.id;
-  const orderId = sp.telegram_payment_charge_id || sp.provider_payment_charge_id || `${telegramId}-${Date.now()}`;
-
-  const result = processOrder({
-    orderId,
-    telegramId,
-    pkgId,
-    credits: pkg.credits,
-    amount: pkg.price,
-    rawPayload: JSON.stringify(sp),
-  });
-
-  if (result.status === 'duplicate') {
-    console.log(`[stars] order ${orderId} já processada — ignorando`);
-    return;
-  }
-
-  const lang = getLang(ctx);
-  const images = pkg.credits / CREDITS_PER_IMAGE;
-  const msg = lang === 'pt'
-    ? `✅ Pagamento confirmado!\n\n${pkg.credits} créditos (${images} imagens) foram adicionados à sua conta.\n\nUse /gerar pra criar sua primeira imagem.`
-    : `✅ Payment confirmed!\n\n${pkg.credits} credits (${images} images) were added to your account.\n\nUse /gerar to create your first image.`;
-  try {
-    await ctx.reply(msg);
-  } catch (err) {
-    console.warn('[stars] falha ao notificar usuário:', err);
-  }
-  console.log(
-    `[stars] creditado: user=${telegramId} pkg=${pkgId} credits=${pkg.credits} stars=${pkg.price} order=${orderId}`
-  );
-});
-
 // ───────────────────── message handlers ─────────────────────
 
+// Non-photo media: silent. Bot only responds to commands, buttons and photos.
 bot.on(
   [
     'message:video',
@@ -566,50 +560,60 @@ bot.on(
     'message:document',
     'message:sticker',
   ],
-  async (ctx) => {
-    const id = ctx.from!.id;
-    const kb = pending.has(id)
-      ? new InlineKeyboard().text('❌ Cancelar', 'gen:cancel')
-      : new InlineKeyboard()
-        .text('🎨 Gerar imagem', 'menu:gerar')
-        .text('🏠 Menu', 'menu:home');
-    await ctx.reply(
-      '⚠️ Só aceito <b>imagem</b> (foto) ou <b>texto</b>. Toque em <b>🎨 Gerar imagem</b> e envie uma foto com legenda ou apenas texto.',
-      { parse_mode: 'HTML', reply_markup: kb }
-    );
-  }
+  async () => { /* silent */ }
 );
 
 bot.on('message:photo', async (ctx) => {
   const id = ctx.from!.id;
+  ensureUser(id);
   const state = pending.get(id);
-  if (!state) {
-    const kb = new InlineKeyboard()
-      .text('🎨 Gerar imagem', 'menu:gerar')
-      .text('🏠 Menu', 'menu:home');
-    await ctx.reply(
-      `👋 Pra começar uma geração, toque em <b>🎨 Gerar imagem</b> (ou use /gerar). ` +
-      `Depois reenvie sua foto com a descrição na <b>legenda</b>.`,
-      { parse_mode: 'HTML', reply_markup: kb }
-    );
+  const groupId = ctx.message.media_group_id;
+
+  // Faceswap collects across photos via state
+  if (state?.step === 'await_faceswap_photos') {
+    if (state.pendingTimer) {
+      clearTimeout(state.pendingTimer);
+      state.pendingTimer = undefined;
+    }
+    const photos = ctx.message.photo;
+    const largest = photos[photos.length - 1];
+    const imageUrl = await getTelegramFileUrl(ctx, largest.file_id);
+    if (!imageUrl) {
+      const lang = getLang(ctx);
+      await ctx.reply(s('downloadFail', lang));
+      return;
+    }
+    state.collected.push(imageUrl);
+
+    if (state.collected.length >= 2) {
+      if (groupId) markGroupNotified(groupId);
+      const refs = state.collected.slice(0, 2);
+      clearPending(id);
+      await handleGenerate(ctx, id, FACESWAP_PROMPT, refs);
+      return;
+    }
+
+    const lang = getLang(ctx);
+    if (groupId) {
+      state.pendingTimer = setTimeout(async () => {
+        const current = pending.get(id);
+        if (current?.step !== 'await_faceswap_photos') return;
+        await ctx.reply(s('faceswapWaiting', lang), { parse_mode: 'HTML' }).catch(() => { });
+      }, MEDIA_GROUP_WAIT_MS);
+    } else {
+      await ctx.reply(s('faceswapWaiting', lang), { parse_mode: 'HTML' });
+    }
     return;
   }
 
-  if (state.step === 'await_edit_prompt') {
-    await ctx.reply(
-      '✏️ Pra editar, envie apenas o <b>texto</b> descrevendo a mudança.',
-      { parse_mode: 'HTML' }
-    );
-    return;
+  // Single-photo flows (undress, enhance): ignore extra siblings in same group
+  if (groupId) {
+    if (notifiedGroups.has(groupId)) return;
+    markGroupNotified(groupId);
   }
 
-  const caption = ctx.message.caption?.trim();
-  if (!caption) {
-    const kb = new InlineKeyboard().text('❌ Cancelar', 'gen:cancel');
-    await ctx.reply(
-      '⚠️ Falta o <b>prompt</b>. Reenvie a imagem colocando a descrição no campo de <b>legenda</b>.',
-      { parse_mode: 'HTML', reply_markup: kb }
-    );
+  if (getCredits(id) < CREDITS_PER_IMAGE) {
+    await notifyInsufficient(ctx, id);
     return;
   }
 
@@ -617,37 +621,33 @@ bot.on('message:photo', async (ctx) => {
   const largest = photos[photos.length - 1];
   const imageUrl = await getTelegramFileUrl(ctx, largest.file_id);
   if (!imageUrl) {
-    await ctx.reply('❌ Não consegui baixar sua imagem. Tenta de novo.');
+    const lang = getLang(ctx);
+    await ctx.reply(s('downloadFail', lang));
     return;
   }
 
-  pending.delete(id);
-  await handleGenerate(ctx, id, caption, imageUrl);
+  if (state?.step === 'await_undress_photo') {
+    clearPending(id);
+    await handleGenerate(ctx, id, UNDRESS_PROMPT, [imageUrl]);
+    return;
+  }
+
+  // Default flow: enhance to 4K
+  clearPending(id);
+  await handleGenerate(ctx, id, ENHANCE_PROMPT, [imageUrl]);
 });
 
+// Text is silent except when user is in await_edit_prompt (opted in via Editar foto button).
 bot.on('message:text', async (ctx) => {
   if (ctx.message.text.startsWith('/')) return;
   const id = ctx.from!.id;
   const state = pending.get(id);
-  if (!state) {
-    const kb = new InlineKeyboard()
-      .text('🎨 Gerar imagem', 'menu:gerar')
-      .text('🏠 Menu', 'menu:home');
-    await ctx.reply(
-      `👋 Pra gerar uma imagem, toque em <b>🎨 Gerar imagem</b> (ou use /gerar) antes de enviar o prompt.`,
-      { parse_mode: 'HTML', reply_markup: kb }
-    );
-    return;
-  }
+  if (state?.step !== 'await_edit_prompt') return;
   const text = ctx.message.text.trim();
-  if (state.step === 'await_edit_prompt') {
-    const imageUrl = state.imageUrl;
-    pending.delete(id);
-    await handleGenerate(ctx, id, text, imageUrl);
-    return;
-  }
-  pending.delete(id);
-  await handleGenerate(ctx, id, text);
+  if (text.length < 2) return;
+  const imageUrl = state.imageUrl;
+  clearPending(id);
+  await handleGenerate(ctx, id, text, [imageUrl]);
 });
 
 const MAX_PROMPT_LENGTH = 2000;
@@ -656,49 +656,39 @@ async function handleGenerate(
   ctx: Context,
   id: number,
   prompt: string,
-  imageUrl?: string
+  imageUrls?: string[]
 ) {
+  const lang = getLang(ctx);
+
   if (generating.has(id)) {
-    await ctx.reply(
-      '⏳ Aguarda a geração atual terminar antes de pedir outra.'
-    );
     return;
   }
 
-  if (!prompt || prompt.length < 2) {
-    await ctx.reply('⚠️ Prompt muito curto. Descreva o que você quer gerar.');
-    return;
-  }
-  if (prompt.length > MAX_PROMPT_LENGTH) {
-    await ctx.reply(
-      `⚠️ Prompt muito longo (máx ${MAX_PROMPT_LENGTH} caracteres).`
-    );
+  if (!prompt || prompt.length < 2 || prompt.length > MAX_PROMPT_LENGTH) {
     return;
   }
 
   if (!debitCredits(id, CREDITS_PER_IMAGE)) {
-    await ctx.reply(
-      `⚠️ Créditos insuficientes. Você tem ${getCredits(id)}, precisa de ${CREDITS_PER_IMAGE}.`
-    );
+    await notifyInsufficient(ctx, id);
     return;
   }
 
+  const refs = imageUrls && imageUrls.length > 0
+    ? imageUrls.slice(0, MAX_REFERENCE_IMAGES)
+    : undefined;
+
   generating.add(id);
-  const statusMsg = await ctx.reply('🎨 Gerando sua imagem... (30–60s)');
+  const statusMsg = await ctx.reply(s('generating', lang));
   try {
-    const out = await generateImage(prompt, imageUrl ? [imageUrl] : undefined);
+    const out = await generateImage(prompt, refs);
     logGeneration(id, prompt, CREDITS_PER_IMAGE);
-    lastGenerated.set(id, out);
 
     const remaining = getCredits(id);
-    const token = saveHdUrl(out);
-    const kb = resultKeyboard(token);
+    const genToken = saveGeneration({ outputUrl: out, prompt, inputUrls: refs });
+    const kb = resultKeyboard(genToken, lang);
 
     await ctx.replyWithPhoto(out, {
-      caption:
-        `✨ <b>Pronto!</b> Toque na imagem pra revelar.\n\n` +
-        `💬 <i>${prompt.slice(0, 200)}</i>\n\n` +
-        `💎 Restam <b>${remaining}</b> créditos`,
+      caption: STR.resultCaption(remaining, lang),
       parse_mode: 'HTML',
       has_spoiler: true,
       reply_markup: kb,
@@ -710,11 +700,8 @@ async function handleGenerate(
     refundCredits(id, CREDITS_PER_IMAGE);
     logGeneration(id, prompt, 0);
     console.error('Erro na geração:', err);
-    const kb = new InlineKeyboard().text('🔄 Tentar de novo', 'menu:gerar');
-    await ctx.reply(
-      '❌ Erro ao gerar. Seus créditos foram devolvidos.\n\nTente novamente ou mude o prompt.',
-      { reply_markup: kb }
-    );
+    const kb = new InlineKeyboard().text(s('home', lang), 'menu:home');
+    await ctx.reply(s('generationError', lang), { reply_markup: kb });
   } finally {
     generating.delete(id);
   }
@@ -724,16 +711,28 @@ bot.catch((err) => console.error('Bot error:', err));
 
 startServer(bot);
 
-bot.api
-  .setMyCommands([
-    { command: 'start', description: 'Menu principal' },
-    { command: 'gerar', description: 'Gerar uma imagem' },
-    { command: 'saldo', description: 'Ver meus créditos' },
-    { command: 'comprar', description: 'Comprar créditos' },
-    { command: 'ajuda', description: 'Como funciona' },
-    { command: 'cancelar', description: 'Cancelar fluxo ativo' },
-  ])
-  .catch((err) => console.warn('Falha ao setar comandos:', err));
+const commandsEn = [
+  { command: 'start', description: 'Main menu' },
+  { command: 'undress', description: 'Undress (1 photo)' },
+  { command: 'faceswap', description: 'Face Swap (2 photos)' },
+  { command: 'balance', description: 'View my credits' },
+  { command: 'buy', description: 'Buy credits' },
+  { command: 'help', description: 'How it works' },
+  { command: 'cancel', description: 'Cancel active flow' },
+];
+const commandsPt = [
+  { command: 'start', description: 'Menu principal' },
+  { command: 'undress', description: 'Undress (1 foto)' },
+  { command: 'faceswap', description: 'Face Swap (2 fotos)' },
+  { command: 'saldo', description: 'Ver meus créditos' },
+  { command: 'comprar', description: 'Comprar créditos' },
+  { command: 'ajuda', description: 'Como funciona' },
+  { command: 'cancelar', description: 'Cancelar fluxo ativo' },
+];
+Promise.all([
+  bot.api.setMyCommands(commandsEn),
+  bot.api.setMyCommands(commandsPt, { language_code: 'pt' }),
+]).catch((err) => console.warn('Falha ao setar comandos:', err));
 
 const telegramSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 const webhookBaseUrl = process.env.WEBHOOK_BASE_URL?.replace(/\/$/, '');
@@ -747,7 +746,7 @@ async function start() {
     await bot.api.setWebhook(url, {
       secret_token: telegramSecret,
       drop_pending_updates: false,
-      allowed_updates: ['message', 'callback_query', 'pre_checkout_query'],
+      allowed_updates: ['message', 'callback_query'],
     });
     console.log(`🔥 Bot @${username} rodando (webhook → ${url})`);
   } else {

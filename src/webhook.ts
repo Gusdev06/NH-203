@@ -164,7 +164,7 @@ export async function handleCaktoWebhook(
   try {
     await bot.api.sendMessage(
       telegramId,
-      `✅ Pagamento confirmado!\n\n${pkg.credits} créditos (${images} imagens) foram adicionados à sua conta.\n\nUse /gerar pra criar sua primeira imagem.`
+      `✅ Pagamento confirmado!\n\n${pkg.credits} créditos (${images} imagens) foram adicionados.\n\n📸 Manda a foto que você quer melhorar.`
     );
   } catch (err) {
     console.warn('[webhook] falha ao notificar usuário no Telegram:', err);

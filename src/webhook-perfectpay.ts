@@ -135,8 +135,8 @@ export async function handlePerfectPayWebhook(
   const images = pkg.credits / CREDITS_PER_IMAGE;
   const isBrl = pkg.currency === 'BRL';
   const message = isBrl
-    ? `✅ Pagamento confirmado!\n\n${pkg.credits} créditos (${images} imagens) foram adicionados à sua conta.\n\nUse /gerar pra criar sua primeira imagem.`
-    : `✅ Payment confirmed!\n\n${pkg.credits} credits (${images} images) were added to your account.\n\nUse /gerar to create your first image.`;
+    ? `✅ Pagamento confirmado!\n\n${pkg.credits} créditos (${images} imagens) foram adicionados.\n\n📸 Manda a foto que você quer melhorar.`
+    : `✅ Payment confirmed!\n\n${pkg.credits} credits (${images} images) added.\n\n📸 Send the photo you want to enhance.`;
   try {
     await bot.api.sendMessage(telegramId, message);
   } catch (err) {

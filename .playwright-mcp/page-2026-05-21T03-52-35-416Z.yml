@@ -1,0 +1,342 @@
+- generic [ref=e8]:
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - link "SYNC-DOCUMENTATION" [ref=e12] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e14]: SYNC-DOCUMENTATION
+      - button "Toggle theme" [ref=e16] [cursor=pointer]:
+        - img [ref=e17]
+    - generic [ref=e21]:
+      - generic [ref=e25] [cursor=pointer]:
+        - img [ref=e26]:
+          - img [ref=e27]
+        - textbox "Pesquisar" [ref=e29]
+        - generic [ref=e30]: ⌘K
+      - list [ref=e34]:
+        - listitem [ref=e35]:
+          - generic "Auth Token" [ref=e36] [cursor=pointer]:
+            - generic [ref=e37]: Auth Token
+            - img [ref=e39]:
+              - img [ref=e40]
+          - list [ref=e42]:
+            - listitem [ref=e43]:
+              - link "Gera o token de utilização da aplicação POST" [ref=e44] [cursor=pointer]:
+                - /url: /gera-o-token-de-utiliza%C3%A7%C3%A3o-da-aplica%C3%A7%C3%A3o-18075876e0
+                - generic [ref=e45]: Gera o token de utilização da aplicação
+                - generic [ref=e48]: POST
+        - listitem [ref=e49]:
+          - generic "Saldo" [ref=e50] [cursor=pointer]:
+            - generic [ref=e51]: Saldo
+            - img [ref=e53]:
+              - img [ref=e54]
+          - list [ref=e56]:
+            - listitem [ref=e57]:
+              - link "Retorna o Saldo do Usuário GET" [ref=e58] [cursor=pointer]:
+                - /url: /retorna-o-saldo-do-usu%C3%A1rio-18308815e0
+                - generic [ref=e59]: Retorna o Saldo do Usuário
+                - generic [ref=e62]: GET
+        - listitem [ref=e63]:
+          - generic "Transações" [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]: Transações
+            - img [ref=e67]:
+              - img [ref=e68]
+          - list [ref=e70]:
+            - listitem [ref=e71]:
+              - link "Consulta status da transação GET" [ref=e72] [cursor=pointer]:
+                - /url: /consulta-status-da-transa%C3%A7%C3%A3o-18075877e0
+                - generic [ref=e73]: Consulta status da transação
+                - generic [ref=e76]: GET
+        - listitem [ref=e77]:
+          - generic "Utmify" [ref=e78] [cursor=pointer]:
+            - generic [ref=e79]: Utmify
+            - img [ref=e81]:
+              - img [ref=e82]
+          - list [ref=e84]:
+            - listitem [ref=e85]:
+              - link "Salvar Token POST" [ref=e86] [cursor=pointer]:
+                - /url: /salvar-token-21267302e0
+                - generic [ref=e87]: Salvar Token
+                - generic [ref=e90]: POST
+            - listitem [ref=e91]:
+              - link "Desativa Token POST" [ref=e92] [cursor=pointer]:
+                - /url: /desativa-token-21267309e0
+                - generic [ref=e93]: Desativa Token
+                - generic [ref=e96]: POST
+        - listitem [ref=e97]:
+          - generic "Partner" [ref=e98] [cursor=pointer]:
+            - generic [ref=e99]: Partner
+            - img [ref=e101]:
+              - img [ref=e102]
+          - list [ref=e104]:
+            - listitem [ref=e105]:
+              - link "Consulta dados do Parceiro GET" [ref=e106] [cursor=pointer]:
+                - /url: /consulta-dados-do-parceiro-18075878e0
+                - generic [ref=e107]: Consulta dados do Parceiro
+                - generic [ref=e110]: GET
+        - listitem [ref=e111]:
+          - generic "Pix - CashIn" [ref=e112] [cursor=pointer]:
+            - generic [ref=e113]: Pix - CashIn
+            - img [ref=e115]:
+              - img [ref=e116]
+          - list [ref=e118]:
+            - listitem [ref=e119]:
+              - link "Solicitação de depósito via Pix POST" [ref=e120] [cursor=pointer]:
+                - /url: /solicita%C3%A7%C3%A3o-de-dep%C3%B3sito-via-pix-18075879e0
+                - generic [ref=e121]: Solicitação de depósito via Pix
+                - generic [ref=e124]: POST
+        - listitem [ref=e125]:
+          - generic "Pix - CashOut" [ref=e126] [cursor=pointer]:
+            - generic [ref=e127]: Pix - CashOut
+            - img [ref=e129]:
+              - img [ref=e130]
+          - list [ref=e132]:
+            - listitem [ref=e133]:
+              - link "Solicitação de saque Pix POST" [ref=e134] [cursor=pointer]:
+                - /url: /solicita%C3%A7%C3%A3o-de-saque-pix-18075881e0
+                - generic [ref=e135]: Solicitação de saque Pix
+                - generic [ref=e138]: POST
+        - listitem [ref=e139]:
+          - generic "Webhooks" [ref=e140] [cursor=pointer]:
+            - generic [ref=e141]: Webhooks
+            - img [ref=e143]:
+              - img [ref=e144]
+          - list [ref=e146]:
+            - listitem [ref=e147]:
+              - generic "Cashin" [ref=e148] [cursor=pointer]:
+                - generic [ref=e149]: Cashin
+                - img [ref=e151]:
+                  - img [ref=e152]
+            - listitem [ref=e154]:
+              - generic "Cashout" [ref=e155] [cursor=pointer]:
+                - generic [ref=e156]: Cashout
+                - img [ref=e158]:
+                  - img [ref=e159]
+            - listitem [ref=e161]:
+              - link "ListAll GET" [ref=e162] [cursor=pointer]:
+                - /url: /listall-19542558e0
+                - generic [ref=e163]: ListAll
+                - generic [ref=e166]: GET
+            - listitem [ref=e167]:
+              - link "Create POST" [ref=e168] [cursor=pointer]:
+                - /url: /create-19542617e0
+                - generic [ref=e169]: Create
+                - generic [ref=e172]: POST
+            - listitem [ref=e173]:
+              - link "Update PUT" [ref=e174] [cursor=pointer]:
+                - /url: /update-19542619e0
+                - generic [ref=e175]: Update
+                - generic [ref=e178]: PUT
+            - listitem [ref=e179]:
+              - link "Delete DELETE" [ref=e180] [cursor=pointer]:
+                - /url: /delete-19542627e0
+                - generic [ref=e181]: Delete
+                - generic [ref=e184]: DELETE
+        - listitem [ref=e185]:
+          - generic "Old API" [ref=e186] [cursor=pointer]:
+            - generic [ref=e187]: Old API
+            - img [ref=e189]:
+              - img [ref=e190]
+          - list [ref=e192]:
+            - listitem [ref=e193]:
+              - link "CashIn POST" [ref=e194] [cursor=pointer]:
+                - /url: /cashin-20187696e0
+                - generic [ref=e195]: CashIn
+                - generic [ref=e198]: POST
+            - listitem [ref=e199]:
+              - link "Consulta os dados do Parceiro GET" [ref=e200] [cursor=pointer]:
+                - /url: /consulta-os-dados-do-parceiro-20187697e0
+                - generic [ref=e201]: Consulta os dados do Parceiro
+                - generic [ref=e204]: GET
+        - listitem [ref=e205]:
+          - generic "Esquemas" [ref=e206] [cursor=pointer]:
+            - generic [ref=e207]: Esquemas
+            - img [ref=e208]:
+              - img [ref=e209]
+            - img [ref=e212]:
+              - img [ref=e213]
+          - list [ref=e215]:
+            - listitem [ref=e216]:
+              - generic "Webhook" [ref=e217] [cursor=pointer]:
+                - generic [ref=e218]: Webhook
+                - img [ref=e220]:
+                  - img [ref=e221]
+  - generic [ref=e230]:
+    - generic [ref=e231]:
+      - navigation [ref=e232]:
+        - list [ref=e233]:
+          - listitem [ref=e234]:
+            - generic [ref=e235]: Auth Token
+      - generic [ref=e237]:
+        - button "Copiar Página" [ref=e238] [cursor=pointer]:
+          - generic [ref=e239]:
+            - img [ref=e240]:
+              - img [ref=e241]
+            - text: Copiar Página
+        - button [ref=e244] [cursor=pointer]:
+          - img [ref=e245]:
+            - img [ref=e246]
+    - heading "Gera o token de utilização da aplicação" [level=1] [ref=e250]
+    - generic [ref=e252]:
+      - generic [ref=e255]: POST
+      - generic [ref=e258]: /api/partner/v1/auth-token
+      - button "Testar" [ref=e260] [cursor=pointer]:
+        - img [ref=e261]:
+          - img [ref=e262]
+        - generic [ref=e264]: Testar
+    - button "Run in Apidog" [ref=e265] [cursor=pointer]:
+      - img [ref=e266]:
+        - img [ref=e267]
+      - generic [ref=e269]: Run in Apidog
+    - generic [ref=e272]:
+      - generic [ref=e273]:
+        - text: Endpoint para geração do Bearer Token para efetuar as requests.
+        - text: O Token tem validade de 1 hora.
+      - generic [ref=e274]:
+        - text: ATENÇÃO!!
+        - text: Gere um novo token, apenas quando o anterior expirar.
+    - generic [ref=e275]:
+      - heading "Requisição" [level=2] [ref=e276]
+      - generic [ref=e277]:
+        - generic [ref=e279]:
+          - generic [ref=e281]:
+            - generic [ref=e282]: Parâmetros Body
+            - generic [ref=e283]: application/json
+          - button "Gerar Código" [ref=e285] [cursor=pointer]:
+            - img [ref=e286]:
+              - img [ref=e287]
+            - generic [ref=e289]: Gerar Código
+        - generic [ref=e292]:
+          - generic [ref=e297]:
+            - heading [level=3] [ref=e298]
+            - list [ref=e299]:
+              - listitem [ref=e300]
+              - listitem [ref=e301]
+              - listitem [ref=e302]
+          - generic [ref=e305] [cursor=pointer]:
+            - generic [ref=e306]: Examples
+            - img [ref=e307]:
+              - img [ref=e308]
+    - generic [ref=e311]:
+      - heading "Respostas" [level=2] [ref=e312]
+      - tablist [ref=e313]:
+        - generic [ref=e314]:
+          - tab "right 🟢200 OK" [expanded] [ref=e315] [cursor=pointer]:
+            - img "right" [ref=e316]:
+              - img [ref=e317]
+            - generic [ref=e320]:
+              - generic [ref=e321]: 🟢200
+              - generic [ref=e322]: OK
+          - tabpanel [ref=e323]:
+            - generic [ref=e327]:
+              - generic [ref=e328]:
+                - generic [ref=e332]: application/json
+                - generic [ref=e335]: Consulta realizada com sucesso
+              - generic [ref=e336]:
+                - generic [ref=e338]:
+                  - generic [ref=e340]:
+                    - text: Body
+                    - generic [ref=e342]: application/json
+                  - button "Gerar Código" [ref=e344] [cursor=pointer]:
+                    - img [ref=e345]:
+                      - img [ref=e346]
+                    - generic [ref=e348]: Gerar Código
+                - generic [ref=e352]:
+                  - heading [level=3] [ref=e353]
+                  - list [ref=e354]:
+                    - listitem [ref=e355]
+                    - listitem [ref=e356]
+                    - listitem [ref=e357]
+        - tab "right 🟠401 Não autorizado" [ref=e359] [cursor=pointer]:
+          - img "right" [ref=e360]:
+            - img [ref=e361]
+          - generic [ref=e364]:
+            - generic [ref=e365]: 🟠401
+            - generic [ref=e366]: Não autorizado
+        - tab "right 🟠429 Pedido inválido" [ref=e368] [cursor=pointer]:
+          - img "right" [ref=e369]:
+            - img [ref=e370]
+          - generic [ref=e373]:
+            - generic [ref=e374]: 🟠429
+            - generic [ref=e375]: Pedido inválido
+    - generic [ref=e376]:
+      - generic [ref=e378]:
+        - generic [ref=e379]:
+          - generic [ref=e381]: Request Example
+          - generic [ref=e382]:
+            - generic [ref=e383]:
+              - tablist [ref=e384]:
+                - generic [ref=e386]:
+                  - tab "Shell" [selected] [ref=e388] [cursor=pointer]
+                  - tab "JavaScript" [ref=e390] [cursor=pointer]
+                  - tab "Java" [ref=e392] [cursor=pointer]
+                  - tab "Swift" [ref=e394] [cursor=pointer]
+                  - tab "Go" [ref=e396] [cursor=pointer]
+                  - tab "PHP" [ref=e398] [cursor=pointer]
+                  - tab "Python" [ref=e400] [cursor=pointer]
+              - generic:
+                - generic:
+                  - tabpanel "Shell"
+            - img [ref=e402]:
+              - img [ref=e403]
+        - generic [ref=e409]:
+          - generic [ref=e410] [cursor=pointer]:
+            - generic [ref=e411]:
+              - radio "cURL" [checked]
+            - text: cURL
+          - generic [ref=e412] [cursor=pointer]:
+            - generic [ref=e413]:
+              - radio "cURL-Windows"
+            - text: cURL-Windows
+          - generic [ref=e414] [cursor=pointer]:
+            - generic [ref=e415]:
+              - radio "Httpie"
+            - text: Httpie
+          - generic [ref=e416] [cursor=pointer]:
+            - generic [ref=e417]:
+              - radio "wget"
+            - text: wget
+          - generic [ref=e418] [cursor=pointer]:
+            - generic [ref=e419]:
+              - radio "PowerShell"
+            - text: PowerShell
+        - code [ref=e422]: "curl --location '/api/partner/v1/auth-token' \\ --header 'Content-Type: application/json' \\ --data '{ \"client_id\": \"89210cff-1a37-4cd0-825d-45fecd8e77bb\", \"client_secret\": \"dadc1b2c-86ee-4256-845a-d1511de315bb\" }'"
+      - generic [ref=e423]:
+        - generic [ref=e425]:
+          - generic [ref=e428]: Response Example
+          - generic [ref=e429] [cursor=pointer]:
+            - generic [ref=e430]:
+              - combobox [ref=e432]
+              - generic [ref=e434]: 200 - Example 1
+            - generic:
+              - img:
+                - img
+        - code [ref=e437]: "{ \"access_token\": \"123003123|XzrqSwIMFS2EMuHBUPa2zhyOlcQ5cGgTgKieiuAp6a3fa3a5\", \"token_type\": \"Bearer\", \"expires_in\": 3600, \"expires_at\": \"2025-06-22T02:49:47.440458Z\" }"
+    - generic [ref=e438]:
+      - generic [ref=e439]: Modificado em
+      - text: há 6 meses
+    - link "Próxima página Retorna o Saldo do Usuário" [ref=e441] [cursor=pointer]:
+      - /url: /retorna-o-saldo-do-usu%C3%A1rio-18308815e0
+      - generic [ref=e442]:
+        - generic [ref=e443]: Próxima página
+        - generic [ref=e444]: Retorna o Saldo do Usuário
+      - img [ref=e445]:
+        - img [ref=e446]
+    - contentinfo [ref=e449]:
+      - generic [ref=e450]:
+        - link "LLMs.txt" [ref=e451] [cursor=pointer]:
+          - /url: /llms.txt
+          - button "LLMs.txt" [ref=e452]:
+            - generic [ref=e453]: LLMs.txt
+        - button "Clonar" [ref=e454] [cursor=pointer]:
+          - img [ref=e455]:
+            - img [ref=e456]
+          - generic [ref=e460]: Clonar
+        - button "Exportar" [ref=e461] [cursor=pointer]:
+          - img [ref=e462]:
+            - img [ref=e463]
+          - generic [ref=e466]: Exportar
+      - link "homepage link" [ref=e469] [cursor=pointer]:
+        - /url: https://apidog.com
+        - generic [ref=e470]:
+          - generic [ref=e471]: Built with
+          - img [ref=e472]
