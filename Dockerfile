@@ -19,6 +19,7 @@ COPY --from=deps --chown=app:app /app/node_modules ./node_modules
 COPY --chown=app:app package.json package-lock.json tsconfig.json ./
 COPY --chown=app:app src ./src
 COPY --chown=app:app scripts ./scripts
+COPY --chown=app:app *.mp4 ./
 
 USER app
 

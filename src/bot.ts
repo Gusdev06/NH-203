@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import { existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Bot, InlineKeyboard, InputFile, type Context } from 'grammy';
 import { run, sequentialize } from '@grammyjs/runner';
 import {
@@ -355,6 +357,13 @@ async function startFaceswap(ctx: Context, id: number) {
 // ───────────────────── commands ─────────────────────
 
 const welcomeVideoSource = process.env.WELCOME_VIDEO?.trim();
+const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+function resolveWelcomeVideoPath(source: string): string | undefined {
+  const candidates = [source, resolve(projectRoot, source)];
+  return candidates.find((p) => existsSync(p));
+}
+
 let cachedWelcomeVideoFileId: string | undefined;
 
 async function sendWelcomeVideo(ctx: Context) {
@@ -365,10 +374,13 @@ async function sendWelcomeVideo(ctx: Context) {
       media = cachedWelcomeVideoFileId;
     } else if (/^https?:\/\//i.test(welcomeVideoSource)) {
       media = welcomeVideoSource;
-    } else if (existsSync(welcomeVideoSource)) {
-      media = new InputFile(welcomeVideoSource);
     } else {
-      media = welcomeVideoSource;
+      const localPath = resolveWelcomeVideoPath(welcomeVideoSource);
+      if (!localPath) {
+        console.warn(`[welcome-video] arquivo não encontrado: ${welcomeVideoSource}`);
+        return;
+      }
+      media = new InputFile(localPath);
     }
     const msg = await ctx.replyWithVideo(media, { has_spoiler: true });
     if (!cachedWelcomeVideoFileId && msg.video?.file_id) {
